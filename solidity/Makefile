@@ -1,5 +1,7 @@
 .PHONY: build
 
+node_modules:
+	npm install
 
 build:
 	./node_modules/.bin/truffle compile
