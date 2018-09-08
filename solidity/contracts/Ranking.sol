@@ -397,7 +397,7 @@ contract Ranking {
         voterInfo.stake = stake;
         voterInfo.direction = direction;
 
-        votingContract.revealVote(voting.pollId, direction, stake, salt);
+        votingContract.revealVote(voting.pollId, direction, stake, salt, msg.sender);
 
         stakesCounter++;
 

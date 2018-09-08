@@ -73,12 +73,12 @@ contract Voting is IVoting {
     @dev Assumes that msg.sender has approved voting contract to spend on their behalf
     @param _numTokens The number of votingTokens desired in exchange for ERC20 tokens
     */
-    function requestVotingRights(uint _pollId, uint _numTokens) public {
+    function requestVotingRights(uint _pollId, uint _numTokens, address _voter) private {
         
-        require(token.balanceOf(msg.sender) >= _numTokens);
-        pollMap[_pollId].lockedStakes[msg.sender] += _numTokens;
-        require(token.transferFrom(msg.sender, this, _numTokens));
-        emit _VotingRightsGranted(_numTokens, msg.sender);
+        require(token.balanceOf(_voter) >= _numTokens);
+        pollMap[_pollId].lockedStakes[_voter] += _numTokens;
+        require(token.transferFrom(_voter, this, _numTokens));
+        emit _VotingRightsGranted(_numTokens, _voter);
     }
 
     /**
@@ -122,9 +122,7 @@ contract Voting is IVoting {
 
         emit _VoteCommitted(_pollID, voter);
     }
-    function revealVote(uint _pollID, uint _voteOption, uint _voteStake, uint _salt) public {
-        revealVote(_pollID, _voteOption, _voteStake, _salt, msg.sender);
-    }
+   
 
     /**
     @notice Reveals vote with choice and secret salt used in generating commitHash to attribute committed tokens
@@ -145,10 +143,10 @@ contract Voting is IVoting {
         uint fee = calculateRevealFee(_pollID, _voteStake);
         payFee(_pollID, fee, _voter);
 
-        requestVotingRights(_pollID, _voteStake);
+        requestVotingRights(_pollID, _voteStake, _voter);
         
         //  uint numTokens = getNumTokens(msg.sender, _pollID);
-        bytes32 UUID = attrUUID(msg.sender, _pollID);
+        bytes32 UUID = attrUUID(_voter, _pollID);
 
         store.setAttribute(UUID, "numTokens", _voteStake);
 
@@ -158,8 +156,8 @@ contract Voting is IVoting {
             pollMap[_pollID].votesAgainst += _voteStake;
         }
 
-        pollMap[_pollID].didReveal[msg.sender] = true;
-        pollMap[_pollID].voteOptions[msg.sender] = _voteOption;
+        pollMap[_pollID].didReveal[_voter] = true;
+        pollMap[_pollID].voteOptions[_voter] = _voteOption;
 
         emit _VoteRevealed(_pollID, _voteStake, pollMap[_pollID].votesFor, pollMap[_pollID].votesAgainst, _voteOption, _voter, _salt);
     }
