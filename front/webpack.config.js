@@ -112,7 +112,7 @@ module.exports = env => {
           ]
         }),
         {
-          test: /\.(jpg|jpeg|gif|png|svg)$/,
+          test: /\.(jpg|jpeg|gif|png)$/,
           loader: "url-loader",
           options: {
             name: "[name].[ext]",
@@ -127,7 +127,10 @@ module.exports = env => {
             name: "static/media/fonts/[name].[ext]"
           }
         },
-
+        {
+          test: /\.svg$/,
+          loader: 'svg-inline-loader'
+        },
         {
           test: /\.md$/,
           loader: "file-loader",

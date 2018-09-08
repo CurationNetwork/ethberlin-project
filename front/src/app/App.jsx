@@ -5,6 +5,7 @@ import { observer } from "mobx-react";
 import AppStore from "../store/AppStore";
 import Loader from './common/loader/Loader';
 import Item from './item/Item';
+import ModalContainer from './common/modal/ModalContainer';
 
 import "./App.less";
 
@@ -17,6 +18,7 @@ class App extends Component {
 
   render() {
     const items = AppStore.items;
+    const durationAnimation = 200;
     let content;
 
     if (items === null) {
@@ -45,7 +47,44 @@ class App extends Component {
     }
 
     return (
-      <main className="app screen">{content}</main >
+      <main className="app screen" id="app">
+        {content}
+        <ModalContainer
+          isOpen={AppStore.voteId !== null}
+          classNameWindow="dashboard-modal"
+          onClose={() => AppStore.closeModalVote()}
+          //TODO: correct animation
+          animationWindow={{
+            duration: durationAnimation,
+            styleStart: {
+              opacity: 0,
+              transform: 'scale(.95,.95)',
+            },
+            styleEnd: {
+              opacity: 1,
+              transform: 'scale(1,1)',
+            },
+          }}
+          animationBackdrop={{
+            duration: durationAnimation,
+            styleStart: { opacity: 0 },
+            styleEnd: { opacity: 1 },
+          }}
+          blur={{
+            block: 'app',
+            duration: durationAnimation,
+            size: 3,
+          }}
+        >
+          <div className="vote-container">
+            <h2 className="title">Voting</h2>
+
+            <div className="input-wrapper">
+              <p className="caption t-medium">Stake:</p>
+            </div>
+          </div>
+        </ModalContainer>
+      </main >
     );
   }
 }

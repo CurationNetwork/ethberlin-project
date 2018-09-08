@@ -26,8 +26,13 @@ export class AppStore {
   }
 
   @action("open modal vote")
-  putItems(voteId) {
+  vote(voteId) {
     this.voteId = voteId;
+  }
+
+  @action("close modal vote")
+  closeModalVote() {
+    this.voteId = null;
   }
 }
 
