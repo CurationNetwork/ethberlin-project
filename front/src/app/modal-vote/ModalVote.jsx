@@ -1,6 +1,7 @@
 import React, { PureComponent } from 'react';
 import Input from '../common/input/Input';
 import './ModalVote.less';
+import classNames from 'classnames';
 import * as api from '../api/api';
 
 export default class ModalVote extends PureComponent {
@@ -11,10 +12,12 @@ export default class ModalVote extends PureComponent {
       flexComm: null,
       stake: null,
       item: this.props.item,
+      direction: 'up',
     };
 
     this.changeStake = this.changeStake.bind(this);
     this.submitStake = this.submitStake.bind(this);
+    this.selectDirection = this.selectDirection.bind(this);
   }
 
   changeStake(str) {
@@ -31,8 +34,12 @@ export default class ModalVote extends PureComponent {
       });
   }
 
+  selectDirection(direction) {
+    return () => this.setState({ direction });
+  }
+
   render() {
-    const { flexComm, item } = this.state;
+    const { flexComm, item, direction } = this.state;
 
     return (
       <div className="modal-vote">
@@ -53,7 +60,7 @@ export default class ModalVote extends PureComponent {
           <p className="flex-comm">{`Flex commission: ${flexComm === null ? '-' : flexComm}`}</p>
         </div>
 
-        <div className="v-stake-container flex">
+        {/* <div className="v-stake-container flex">
           <section>
             <p className="caption t-medium">Voting stake:</p>
             <Input
@@ -77,6 +84,25 @@ export default class ModalVote extends PureComponent {
               disabled={true}
             />
           </section>
+        </div> */}
+
+        <div className="switch flex">
+          <section
+            onClick={this.selectDirection('up')}
+            className={classNames("up flex", { active: direction === 'up' })}
+          >
+            <svg className="up-icon" viewBox="0 0 24 24">
+              <path fill="#000000" d="M7,10L12,15L17,10H7Z" />
+            </svg>
+            Up</section>
+          <section
+            onClick={this.selectDirection('down')}
+            className={classNames("down flex", { active: direction === 'down' })}
+          >
+            <svg className="down-icon" viewBox="0 0 24 24">
+              <path fill="#000000" d="M7,10L12,15L17,10H7Z" />
+            </svg>
+            Down</section>
         </div>
 
         <button className="submit btn">Commit vote</button>
