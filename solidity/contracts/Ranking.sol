@@ -64,7 +64,7 @@ contract Ranking {
     uint maxRank;
     uint deployTime;
     uint votingCount;
-    uint avgStake = 1;
+    uint avgStake;
 
     IVoting votingContract;
     EIP20Interface token;
@@ -88,7 +88,7 @@ contract Ranking {
     function init(address votingContractAddress, address tokenAddress,
                 uint currentDynamicFeeRate_, uint dynamicFeePrecision_, uint fixedFeeMax_,
                 uint tMin_, uint unstakeSpeed0_, uint unstakeSpeedCoef_,
-                uint currentCommitTtl_, uint currentRevealTtl_
+                uint currentCommitTtl_, uint currentRevealTtl_, uint avgStake_
     )
         public
     {
@@ -104,6 +104,7 @@ contract Ranking {
         unstakeSpeedCoef = unstakeSpeedCoef_;
         currentCommitTtl = currentCommitTtl_;
         currentRevealTtl = currentRevealTtl_;
+        avgStake = avgStake_;
     }
 
 
@@ -309,7 +310,7 @@ contract Ranking {
     function getMoving(uint movingId)
         public
         view
-        onlyExistVoting(votingId)
+        onlyExistMoving(movingId)
         returns (
             uint startTime,
             uint speed,
@@ -393,7 +394,7 @@ contract Ranking {
         Voting storage voting = Votings[item.votingId];
         voting.commissions += getDynamicCommission(item.votingId, stake);
 
-        VoterInfo storage voterInfo = voting.voters[msg.sender];
+       VoterInfo storage voterInfo = voting.voters[msg.sender];
         voterInfo.stake = stake;
         voterInfo.direction = direction;
 
@@ -430,6 +431,8 @@ contract Ranking {
 
             if (!voting.voters[voting.votersAddresses[i]].isWinner)
                 votingContract.withdrawStake(voting.pollId, voting.votersAddresses[i], voting.voters[voting.votersAddresses[i]].stake);
+            else
+                votingContract.withdrawStake(voting.pollId, voting.votersAddresses[i], 0);
         }
 
         tmp = newMoving(now, getUnstakeSpeed(), distance, direction, Items[itemId].votingId);
