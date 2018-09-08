@@ -1,7 +1,8 @@
 import React, { PureComponent } from 'react';
 import AppStore from '../../store/AppStore';
-import { getStage, getDataFromSec } from '../../helpers/utils';
+import { getStage, getDataFromSec, getTimeLeft, calcSpeed } from '../../helpers/utils';
 import moment from 'moment';
+import classNames from 'classnames';
 import { toJS } from 'mobx';
 import './Item.less';
 
@@ -18,7 +19,11 @@ export default class Item extends PureComponent {
 
   render() {
     const { item } = this.props;
-    const itemObj = toJS(item);
+    const movings = toJS(item).moving;
+    const isVoting = item.votingId !== 0;
+    const stage = isVoting ? getStage(item.vote.startTime, item.vote.commitTtl, item.vote.revealTtl) : 'none';
+    const timeLeft = isVoting ? getTimeLeft(item.vote.startTime, item.vote.commitTtl, item.vote.revealTtl) : 0;
+    const speed = (movings && movings.length) ? calcSpeed(movings) : 0;
 
     return (
       <section className="item">
@@ -27,39 +32,44 @@ export default class Item extends PureComponent {
 
         <div className="main-info">
           <h2 className="title">{item.name}</h2>
-          <p className="desctiption">Best kitties in Berlin</p>
+          <p className="desctiption">{item.description}</p>
+          <p className={classNames(
+            'weight', {up: speed > 0}, {down: speed < 0}
+          )}>Weight: <b>{item.lastRank}</b></p>
         </div>
 
         <div className="info">
 
           <div className="info-fields flex-h">
-            <p className="active-state">
-              <span className="active-state-title t-medium">Active stage:</span>
-              <span className="active-state-value">{getStage(item.vote.startTime, item.vote.commitTtl, item.vote.revealTtl)}</span>
-            </p>
-            <p className="start-time">
-              <span className="start-time-title t-medium">Start time:</span>
-              <span className="start-time-value">{moment(new Date(item.vote.startTime * 1000)).format('DD-MM-YYYY HH:mm:ss')}</span>
-            </p>
-            <p className="left-time">
-              <span className="left-time-title t-medium">Left time:</span>
-              <span className="left-time-value">12:30:45</span>
-            </p>
-            <p className="prize">
-              <span className="prize-title t-medium">Prize:</span>
-              <span className="prize-value">{item.balance}</span>
-            </p>
+            {isVoting &&
+              <div>
+                <p className="active-state">
+                  <span className="active-state-title t-medium">Voting</span>
+                  <span className={`active-state-value t-medium ${stage}`}>{stage} stage</span>
+                  <span className="left-time-title t-medium">, {timeLeft} left</span>
+                </p>
+              </div>
+            }
+            {item.balance !== 0 &&
+              <p className="prize">
+                <span className="prize-title t-medium">Bounty:</span>
+                <span className="prize-value t-medium">{item.balance} CRN</span>
+              </p>
+            }
           </div>
 
-          <div className="moving flex-v">
-            <div className="direction down">
-              <svg viewBox="0 0 24 24">
-                <path fill="#000000" d="M12,2L4.5,20.29L5.21,21L12,18L18.79,21L19.5,20.29L12,2Z" />
-              </svg>
+          {speed !== 0 &&
+            <div className="moving flex-v">
+              <p className="speed">
+                <span className="speed t-medium">
+                  Moving
+                  {(speed < 0 && <span className="down"> &darr; </span>)}
+                  {(speed > 0 && <span className="up"> &uarr; </span>)}
+                  at {speed} CRN/sec
+                </span>
+              </p>
             </div>
-            <span className="left-total">5/234</span>
-            <span className="speed">34</span>
-          </div>
+          }
 
         </div>
 

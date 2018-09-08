@@ -25,6 +25,7 @@
 
     .main-info {
         margin-left: 10px;
+        width: 160px;
 
         .title {
             margin: 0;
@@ -32,6 +33,20 @@
             font-family: @font-medium;
             font-size: 17px;
             line-height: 20px;
+        }
+
+        .weight {
+          padding-top: 7px;
+        }
+
+        .weight.up::after {
+          content: ' \2191';
+          color: #369b25;
+        }
+
+        .weight.down::after {
+          content: ' \2193';
+          color: #ce2323;
         }
     }
 
@@ -43,9 +58,17 @@
         .info-fields {
             flex-direction: column;
 
-            .active-state-title, .start-time-title, .left-time-title, .prize-title {
+            .active-state-title, .left-time-title, .prize-title {
                 margin-right: 6px;
             }
+        }
+
+        .active-state-value.commit {
+          color: #369b25
+        }
+
+        .active-state-value.reveal {
+          color: #ce2323
         }
 
         .moving {
@@ -67,7 +90,13 @@
                 }
             }
             .speed {
-                // sdfj
+              .up {
+                color: #369b25;
+              }
+
+              .down {
+                color: #ce2323;
+              }
             }
         }
     }
@@ -101,4 +130,3 @@
         }
     }
 }
-

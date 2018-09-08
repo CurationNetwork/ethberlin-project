@@ -1,3 +1,5 @@
+import moment from 'moment';
+
 export const getStage = (startTime, commitTtl, revealTtl) => {
   const endTimeCommit = startTime + commitTtl;
   const endTimeReveal = startTime + commitTtl + revealTtl;
@@ -14,6 +16,30 @@ export const getStage = (startTime, commitTtl, revealTtl) => {
   if (now > endTimeReveal) {
     return 'none';
   }
+}
+
+export const getTimeLeft = (startTime, commitTtl, revealTtl) => {
+  const endTimeCommit = startTime + commitTtl;
+  const endTimeReveal = startTime + commitTtl + revealTtl;
+  const now = getTimeSec();
+
+  if (now > startTime && now < endTimeCommit) {
+    return moment.duration(endTimeCommit - now, 'seconds').humanize();
+  }
+
+  if (now > startTime && now > endTimeCommit && now < endTimeReveal) {
+    return moment.duration(endTimeReveal - now, 'seconds').humanize();
+  }
+
+  if (now > endTimeReveal) {
+    return 0;
+  }
+}
+
+export const calcSpeed = (movings) => {
+  return movings.reduce((acc, cur) => (
+    acc + cur.speed * (cur.direction === 0 ? -1 : 1)
+  ), 0);
 }
 
 export const getTimeSec = () => {
