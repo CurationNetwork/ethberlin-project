@@ -94,9 +94,9 @@ class App extends Component {
       <main className="app screen" id="app">
         {content}
         <ModalContainer
-          isOpen={AppStore.voteId !== null || AppStore.isAddNewItem !== null}
+          isOpen={AppStore.voteId !== null}
           classNameWindow="dashboard-modal"
-          onClose={() => AppStore.voteId !== null ? AppStore.closeModalVote() : AppStore.closeModalAddNewItem()}
+          onClose={() => AppStore.closeModalVote()}
           animationWindow={{
             duration: durationAnimation,
             styleStart: {
@@ -119,10 +119,35 @@ class App extends Component {
             size: 3,
           }}
         >
-          {AppStore.voteId
-            ? <ModalVote item={AppStore.items !== null ? AppStore.items.find((item) => item.id === AppStore.voteId) : null} />
-            : <ModalAddItem />
-          }
+          <ModalVote item={AppStore.items !== null ? AppStore.items.find((item) => item.id === AppStore.voteId) : null} />
+        </ModalContainer>
+        <ModalContainer
+          isOpen={AppStore.isAddNewItem !== null}
+          classNameWindow="dashboard-modal"
+          onClose={() => AppStore.closeModalAddNewItem()}
+          animationWindow={{
+            duration: durationAnimation,
+            styleStart: {
+              opacity: 0,
+              transform: 'scale(.95,.95)',
+            },
+            styleEnd: {
+              opacity: 1,
+              transform: 'scale(1,1)',
+            },
+          }}
+          animationBackdrop={{
+            duration: durationAnimation,
+            styleStart: { opacity: 0 },
+            styleEnd: { opacity: 1 },
+          }}
+          blur={{
+            block: 'app',
+            duration: durationAnimation,
+            size: 3,
+          }}
+        >
+          <ModalAddItem />
         </ModalContainer>
       </main >
     );
