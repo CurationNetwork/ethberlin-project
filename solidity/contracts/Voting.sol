@@ -142,7 +142,6 @@ contract Voting is IVoting {
 
         uint fee = calculateRevealFee(_pollID, _voteStake);
         payFee(_pollID, fee, _voter);
-
         requestVotingRights(_pollID, _voteStake, _voter);
         
         //  uint numTokens = getNumTokens(msg.sender, _pollID);
@@ -192,8 +191,7 @@ contract Voting is IVoting {
             } 
             returnedBonusPrize = bonusPrize;
             poll.prizePayed[voter] = true;
-
-        } 
+       } 
       
         poll.withdrawedStakes[voter] += _numTokens;
         require(token.transfer(voter, _numTokens));

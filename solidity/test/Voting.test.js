@@ -50,9 +50,9 @@ contract('Voting', function([_, owner, voter1, voter2]) {
         it('start poll', async function() {
             var currentTime = await latestTime();
             console.log("Starting poll");
-            const pollId = await this.voting.startPoll.call(0, 1000, 2000, 1, 1, 1000);
+            const pollId = await this.voting.startPoll.call(0, 1000, 2000, 100, 1000, 1000);
 
-            await this.voting.startPoll(0, 1000, 2000, 1, 1, 1000);
+            await this.voting.startPoll(0, 1000, 2000, 100, 1000, 1000);
             await increaseTimeTo(currentTime + duration.seconds(100));
 
             pollId.should.be.bignumber.equal(1);
@@ -89,15 +89,38 @@ contract('Voting', function([_, owner, voter1, voter2]) {
             console.log("Withdraw stake");
             var bonus = await this.voting.withdrawStake.call(utils.bn(pollId), voter1, utils.bn(10000));
             var prize = await this.voting.getWinnerPrize.call(utils.bn(pollId), voter1);
-            console.log(prize);
-            await this.voting.withdrawStake(utils.bn(pollId), voter1, utils.bn(10000));
+            prize[0].should.be.bignumber.equal(1181);
+            prize[1].should.be.bignumber.equal(909);
+            prize[2].should.be.equal(true);
+
+            var loserPrize = await this.voting.getWinnerPrize.call(utils.bn(pollId), voter2);
+            loserPrize[1].should.be.bignumber.equal(0);
+            loserPrize[2].should.be.equal(false);
+
            
             bonus.should.be.bignumber.gt(0);
+
+            var balance = await this.token.balanceOf.call(voter1);
+            console.log(balance.toString());
+
+            await this.voting.withdrawStake(utils.bn(pollId), voter1, utils.bn(10000));
+
 
             await expectThrow(
                 this.voting.withdrawStake(utils.bn(pollId), voter1, utils.bn(1)), 
                 EVMRevert
             );
+            await this.voting.withdrawStake(utils.bn(pollId), voter2, utils.bn(1000));
+
+            await expectThrow(
+                this.voting.withdrawStake(utils.bn(pollId), voter2, utils.bn(1)), 
+                EVMRevert
+            );
+
+            balance = await this.token.balanceOf.call(voter1);
+            console.log(balance.toString());
+            balance.should.be.bignumber.equal(100000081);
+
         
         })
     })
