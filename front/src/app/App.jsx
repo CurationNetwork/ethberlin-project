@@ -24,7 +24,13 @@ class App extends Component {
                   if (item.votingId !== 0) {
                     api.getVoting(id)
                       .then((vote) => {
-                        AppStore.putItems({ ...item, id, vote });
+                        api.getMoving(id)
+                          .then((moving) => {
+                            AppStore.putItems({ ...item, id, vote, moving });
+                          })
+                          .catch((error) => {
+                            console.error(error);
+                          });
                       })
                       .catch((error) => {
                         console.error(error);
