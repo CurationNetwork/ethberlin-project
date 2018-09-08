@@ -24,8 +24,17 @@ class App extends Component {
                   if (item.votingId !== 0) {
                     api.getVoting(id)
                       .then((vote) => {
-                        api.getMoving(id)
+                        const ids = [];
+                        const promises = [];
+
+                        item.movingsIds.forEach(movId => {
+                          ids.push(movId);
+                          promises.push(api.getMoving(movId));
+                        });
+
+                        Promise.all(promises)
                           .then((moving) => {
+                            console.log({ ...item, id, vote, moving })
                             AppStore.putItems({ ...item, id, vote, moving });
                           })
                           .catch((error) => {
