@@ -9,7 +9,24 @@ export default class ModalVote extends PureComponent {
     this.state = {
       fixComm: null,
       flexComm: null,
+      stake: null,
     };
+
+    this.changeStake = this.changeStake.bind(this);
+  }
+
+  changeStake(str) {
+    this.setState({ stake: str });
+  }
+
+  submitStake(str) {
+    getData
+      .then((response) => {
+        code
+      })
+      .catch((error) => {
+        console.error(error);
+      });
   }
 
   render() {
@@ -24,7 +41,8 @@ export default class ModalVote extends PureComponent {
           <Input
             className="custom-input"
             autofocus={true}
-            onChange={this.onSubmit}
+            onChange={this.changeStake}
+          // onSubmit={}
           />
         </div>
         <div className="commission-container flex">

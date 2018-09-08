@@ -7,13 +7,42 @@ import Loader from './common/loader/Loader';
 import Item from './item/Item';
 import ModalContainer from './common/modal/ModalContainer';
 import ModalVote from './modal-vote/ModalVote';
+import * as api from './api/api';
 import "./App.less";
 
 @observer
 class App extends Component {
   componentDidMount() {
-    //TODO: get itemData
-    setTimeout(() => AppStore.putItems([]), 2000);
+    setTimeout(() =>
+      api.getItemIds()
+        .then((ids) => {
+          if (Array.isArray(ids) && ids.length > 0) {
+            ids.forEach(id => {
+              api.getItem(id)
+                .then((item) => {
+                  if (item.votingId !== 0) {
+                    api.getVoting(id)
+                      .then((vote) => {
+                        console.log({ ...item, id, vote })
+                        AppStore.putItems({ ...item, id, vote });
+                      })
+                      .catch((error) => {
+                        console.error(error);
+                      });
+                  } else {
+                    AppStore.putItems({ ...item, id });
+                  }
+                })
+                .catch((error) => {
+                  console.error(error);
+                });
+            });
+          }
+        })
+        .catch((error) => {
+          console.error(error);
+        })
+      , 0);
   }
 
   render() {
@@ -32,7 +61,7 @@ class App extends Component {
               <p className="cur">curation.</p>
               <p className="net">network</p>
             </div>
-            <div className="overlay" />
+            {/* <div className="overlay" /> */}
           </header>
 
           <div className="list">
@@ -40,12 +69,7 @@ class App extends Component {
               <span className="plus">+</span>
               <span className="add">Add item</span>
             </button>
-            <Item />
-            <Item />
-            <Item />
-            <Item />
-            <Item />
-            <Item />
+            {items.map((item, i) => <Item key={i} item={item} />)}
           </div>
 
         </div>

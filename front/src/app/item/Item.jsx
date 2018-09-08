@@ -1,5 +1,6 @@
 import React, { PureComponent } from 'react';
 import AppStore from '../../store/AppStore';
+import { getStage } from '../../helpers/utils';
 import './Item.less';
 
 export default class Item extends PureComponent {
@@ -14,26 +15,34 @@ export default class Item extends PureComponent {
   }
 
   render() {
+    const { item } = this.props;
+
     return (
       <section className="item">
 
         <div className="img"></div>
 
         <div className="main-info">
-          <h2 className="title">Kitties</h2>
+          <h2 className="title">{item.name}</h2>
           <p className="desctiption">Best kitties in Berlin</p>
         </div>
 
         <div className="info">
 
           <div className="active-voting flex-v">
-            <span className="title t-medium">Active voting:</span>
-            <span className="value">commit stage</span>
-            <span className="time">12:30:45</span>
+            <span className="title t-medium">Active stage:</span>
+            <span className="value">{getStage(item.vote.startTime, item.vote.commitTtl, item.vote.revealTtl)}</span>
+            <span className="start-time">Start time: {new Date(item.vote.startTime * 1000).toString()}</span>
+            <span className="time">left time 12:30:45</span>
+            <span className="prize">Prize: {item.balance}</span>
           </div>
 
           <div className="moving flex-v">
-            <div className="direction"></div>
+            <div className="direction down">
+              <svg viewBox="0 0 24 24">
+                <path fill="#000000" d="M12,2L4.5,20.29L5.21,21L12,18L18.79,21L19.5,20.29L12,2Z" />
+              </svg>
+            </div>
             <span className="left-total">5/234</span>
             <span className="speed">34</span>
           </div>

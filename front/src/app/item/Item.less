@@ -59,6 +59,23 @@
         }
 
         .moving {
+            .direction {
+                width: 15px;
+
+                &.up {
+                    svg > path {
+                        fill: yellowgreen;
+                    }
+                }
+
+                &.down {
+                    transform: rotateZ(180deg);
+
+                    svg > path {
+                        fill: tomato;
+                    }
+                }
+            }
             .speed {
                 // sdfj
             }
