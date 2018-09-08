@@ -6,43 +6,43 @@ export const getItemIds = () => {
 
 export const getItem = (id) => {
   return new Promise((resolve, reject) => {
-      switch (id) {
-        case 1:
-          resolve({
-            name: 'Zoi',
-            owner: '0x0e5f3ade12b0920ab43318cf7bef19cd823bf1c0',
-            lastRank: 123,
-            balance: 0,
-            votingId: 1,
-            movingsIds: [1],
-          });
-          break;
+    switch (id) {
+      case 1:
+        resolve({
+          name: 'Zoi',
+          owner: '0x0e5f3ade12b0920ab43318cf7bef19cd823bf1c0',
+          lastRank: 123,
+          balance: 0,
+          votingId: 1,
+          movingsIds: [1, 3],
+        });
+        break;
 
-        case 2:
-          resolve({
-            name: 'Hoi',
-            owner: '0x0e5f3ade12b0920ab43318cf7bef19cd823bf1c0',
-            lastRank: 222,
-            balance: 404,
-            votingId: 2,
-            movingsIds: [2],
-          });
-          break;
+      case 2:
+        resolve({
+          name: 'Hoi',
+          owner: '0x0e5f3ade12b0920ab43318cf7bef19cd823bf1c0',
+          lastRank: 222,
+          balance: 404,
+          votingId: 2,
+          movingsIds: [2],
+        });
+        break;
 
-        case 3:
-          resolve({
-            name: 'Moi-toi',
-            owner: '0x0e5f3ade12b0920ab43318cf7bef19cd823bf1c0',
-            lastRank: 666,
-            balance: 12,
-            votingId: 3,
-            movingsIds: [3],
-          });
-          break;
+      case 3:
+        resolve({
+          name: 'Moi-toi',
+          owner: '0x0e5f3ade12b0920ab43318cf7bef19cd823bf1c0',
+          lastRank: 666,
+          balance: 12,
+          votingId: 3,
+          movingsIds: [3],
+        });
+        break;
 
-        default:
-          break;
-      }
+      default:
+        break;
+    }
   })
 }
 
@@ -148,5 +148,11 @@ export const getMoving = (id) => {
 export const getFlexComm = (stake) => {
   return new Promise((resolve, reject) => {
     resolve(12432321)
+  })
+}
+
+export const sendNewItem = (name, desc) => {
+  return new Promise((resolve, reject) => {
+    resolve(true)
   })
 }
