@@ -2,23 +2,38 @@ import React, { Component } from "react";
 import { hot } from "react-hot-loader";
 
 import { observer } from "mobx-react";
+import AppStore from "../store/AppStore";
+import Loader from './common/loader/Loader';
+import Item from './item/Item';
 
 import "./App.less";
-import AppStore, { screens } from "../store/AppStore";
 
 @observer
 class App extends Component {
-  render() {
-    let content;
-    switch (AppStore.currentScreen) {
-      case screens.MAIN:
-        content = <p>Main</p>;
-        break;
+  componentDidMount() {
+    //TODO: get itemData
+  }
 
-      default:
-        break;
+  render() {
+    const items = AppStore.items;
+    let content;
+
+    console.log(items)
+
+    if (items !== null) {
+      content = <Loader />;
+    } else {
+      content = (
+        <div className="list">
+          <button className="add-item btn">Add item</button>
+          <Item />
+        </div>
+      );
     }
-    return <div className="app screen flex">{content}</div>;
+
+    return (
+      <main className="app screen">{content}</main >
+    );
   }
 }
 
