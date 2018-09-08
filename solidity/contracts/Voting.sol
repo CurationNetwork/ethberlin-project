@@ -54,7 +54,7 @@ contract Voting is IVoting {
     */
     function init(address _token, address _fund) public {
         require(_token != address(0) && address(token) == address(0));
-        require(_fund != address(0) && address(_fund) == address(0));
+        require(_fund != address(0) && address(fund) == address(0));
 
         token = EIP20Interface(_token);
         fund = _fund;
@@ -168,32 +168,39 @@ contract Voting is IVoting {
     function getVoteOption(uint _pollId, address voter) public view returns (uint) {
         return pollMap[_pollId].voteOptions[voter];
     }
+    function enoughStake(uint _pollID, address _voter, uint _numTokens) public returns (bool) {
+        return pollMap[_pollID].withdrawedStakes[_voter] + _numTokens > pollMap[_pollID].lockedStakes[_voter];
 
-    function withdrawStake(uint _pollID, address _voter, uint _numTokens) public {
+    }
+
+    function withdrawStake(uint _pollID, address _voter, uint _numTokens) public returns (uint _bonusPrize) {
         require(pollEnded(_pollID));
-        require(pollMap[_pollID].lockedStakes[_voter] > _numTokens, "not enough token to withdraw");
+        require(enoughStake(_pollID, _voter, _numTokens), "not enough token to withdraw");
         address voter = _voter;
-        Poll  poll = pollMap[_pollID];
+        Poll poll = pollMap[_pollID];
 
         uint vote = poll.voteOptions[voter] == 1? 1: 0; 
         uint votingResult = result(_pollID);
-
+        uint returnedBonusPrize = 0;
         if(! poll.prizePayed[voter]) {
-            (uint prize, bool isWinner) = getWinnerPrize(_pollID, voter);
+            (uint prize, uint bonusPrize, bool isWinner) = getWinnerPrize(_pollID, voter);
+            
             if (isWinner) {
                 require(token.transfer(voter,  prize));
             } 
+            returnedBonusPrize = bonusPrize;
             poll.prizePayed[voter] = true;
+
         } 
       
-        
-        uint stake = poll.lockedStakes[voter];
-        require(token.transfer(voter, stake));
+        poll.withdrawedStakes[voter] += _numTokens;
+        require(token.transfer(voter, _numTokens));
+        return returnedBonusPrize;
 
     }
 
  
-    function getWinnerPrize(uint _pollId, address voter) public returns (uint prize, bool isWinner ) {
+    function getWinnerPrize(uint _pollId, address voter) public returns (uint prize, uint bonusPrize, bool isWinner ) {
         uint vote = poll.voteOptions[voter] == 1? 1: 0; 
         uint votingResult = result(_pollId);
 
@@ -202,17 +209,12 @@ contract Voting is IVoting {
             Poll poll = pollMap[_pollId];
             uint overallStakes = poll.votesFor + poll.votesAgainst;
             uint winnerPrize = poll.prize.mul(poll.lockedStakes[voter]).div(overallStakes);
-            return (winnerPrize, true);
+            uint rBonusPrize = poll.bonus.mul(poll.lockedStakes[voter]).div(overallStakes);
+            return (winnerPrize, rBonusPrize, true);
         } else {
-            return (0, false);
+            return (0, 0, false);
         }
     }
-
-
-
-
-
-
 
 
     // ==================
@@ -224,7 +226,7 @@ contract Voting is IVoting {
     @param _commitDuration Length of desired commit period in seconds
     @param _revealDuration Length of desired reveal period in seconds
     */
-    function startPoll(uint _itemId, uint _commitDuration, uint _revealDuration, uint _voteFee, uint _revealFeeRate) public returns (uint pollID) {
+    function startPoll(uint _itemId, uint _commitDuration, uint _revealDuration, uint _voteFee, uint _revealFeeRate, uint _bonus) public returns (uint pollID) {
         require(_revealFeeRate > 0);
         pollNonce = pollNonce + 1;
 
@@ -239,7 +241,8 @@ contract Voting is IVoting {
             votesAgainst: 0,
             voteFee: _voteFee,
             revealRateFee: _revealFeeRate,
-            prize: 0
+            prize: 0,
+            bonus: _bonus
         });
 
         emit _PollCreated(_itemId, commitEndDate, revealEndDate, pollNonce, msg.sender);

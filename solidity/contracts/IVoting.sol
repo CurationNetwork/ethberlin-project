@@ -14,10 +14,12 @@ contract IVoting {
         uint voteFee;
         uint revealRateFee;
         uint prize;
+        uint bonus;
         mapping(address => bool) didCommit;   /// indicates whether an address committed a vote for this poll
         mapping(address => bool) didReveal;   /// indicates whether an address revealed a vote for this poll
         mapping(address => uint) voteOptions; /// stores the voteOption of an address that revealed
         mapping(address => uint) lockedStakes; ///
+        mapping(address => uint) withdrawedStakes;
         mapping(address => bool) prizePayed; ///
     }
 
@@ -25,7 +27,7 @@ contract IVoting {
 
     function getVoteOption(uint _pollId, address voter) public view returns (uint);
 
-    function getWinnerPrize(uint _pollId, address voter) public returns (uint prize, bool isWinner );
+    function getWinnerPrize(uint _pollId, address voter) public returns (uint prize, uint bonusPrize, bool isWinner );
 
 
     /**
@@ -36,7 +38,7 @@ contract IVoting {
     @param _voteFee - static fee for voting
     @param _revealFeeRate - reveal fee parameter
     */
-    function startPoll(uint _itemId, uint _commitDuration, uint _revealDuration, uint _voteFee, uint _revealFeeRate) public returns (uint pollID);
+    function startPoll(uint _itemId, uint _commitDuration, uint _revealDuration, uint _voteFee, uint _revealFeeRate, uint _bonus) public returns (uint pollID);
 
     /**
     @notice Commits vote using hash of choice and secret salt to conceal vote until reveal
@@ -54,6 +56,6 @@ contract IVoting {
     */
     function revealVote(uint _pollID, uint _voteOption, uint _voteStake, uint _salt) public;
 
-    function withdrawStake(address voter, uint _numTokens) public;
+    function withdrawStake(address voter, uint _numTokens) public returns(uint bonusPrize);
 
 }

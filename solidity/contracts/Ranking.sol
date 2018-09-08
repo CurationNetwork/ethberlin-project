@@ -274,7 +274,8 @@ contract Ranking {
             voting.commitTtl,
             voting.revealTtl,
             voting.fixedFee,
-            voting.dynamicFeeRate
+            voting.dynamicFeeRate,
+            0 // TODO: pass real bonus
         );
 
         voting.pollId = pollId;
