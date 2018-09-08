@@ -5,7 +5,6 @@ contract IVoting {
 
     mapping(uint => Poll) public pollMap; // maps pollID to Poll struct
 
-  
     struct Poll {
         uint itemId;
         uint commitEndDate;     /// expiration date of commit period for poll
@@ -19,11 +18,12 @@ contract IVoting {
         mapping(address => bool) didReveal;   /// indicates whether an address revealed a vote for this poll
         mapping(address => uint) voteOptions; /// stores the voteOption of an address that revealed
         mapping(address => uint) lockedStakes; ///
+        mapping(address => bool) prizePayed; ///
     }
 
-    function getPollResult(uint _pollId) public returns (uint votesFor, uint votesAgainst);
+    function getPollResult(uint _pollId) public view returns (uint votesFor, uint votesAgainst);
 
-    function getVoteOption(uint _pollId, address voter) public returns (uint);
+    function getVoteOption(uint _pollId, address voter) public view returns (uint);
 
     /**
     @dev Initiates a poll with canonical configured parameters at pollID emitted by PollCreated event
@@ -53,7 +53,4 @@ contract IVoting {
 
     function withdrawStake(address voter, uint _numTokens) public;
 
-     
-
-       
 }

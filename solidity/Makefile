@@ -3,7 +3,10 @@
 node_modules:
 	npm install
 
-build:
+installed_contracts:
+	./node_modules/.bint/truffle install
+
+build: node_modules installed_contracts
 	./node_modules/.bin/truffle compile
 
 test:
