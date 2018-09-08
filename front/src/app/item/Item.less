@@ -6,9 +6,9 @@
     align-items: center;
 
     width: 100%;
-    height: 80px;
+    // height: 80px;
     margin-bottom: 20px;
-    padding: 0 0 0 10px;
+    padding: 10px 0 10px 10px;
 
     border-radius: 6px;
     background-color: #F2F3F7;
@@ -40,21 +40,11 @@
 
         margin-left: 25px;
 
-        .active-voting {
-            .title {
-                display: block;
+        .info-fields {
+            flex-direction: column;
 
+            .active-state-title, .start-time-title, .left-time-title, .prize-title {
                 margin-right: 6px;
-            }
-
-            .value {
-                display: block;
-
-                margin-right: 6px;
-            }
-
-            .time {
-                display: block;
             }
         }
 

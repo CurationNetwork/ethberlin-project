@@ -8,11 +8,13 @@ export class AppStore {
   @observable currentScreen;
   @observable items;
   @observable voteId;
+  @observable isAddNewItem;
 
   constructor() {
     this.currentScreen = screens.MAIN;
     this.items = null;
     this.voteId = null;
+    this.isAddNewItem = null;
   }
 
   @action("set currentScreen")
@@ -38,6 +40,16 @@ export class AppStore {
   @action("open modal vote")
   vote(voteId) {
     this.voteId = voteId;
+  }
+
+  @action("open modal add new item")
+  addNewItem() {
+    this.isAddNewItem = true;
+  }
+
+  @action("close modal add new item")
+  closeModalAddNewItem() {
+    this.isAddNewItem = null;
   }
 
   @action("close modal vote")

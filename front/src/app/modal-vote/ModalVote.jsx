@@ -10,6 +10,7 @@ export default class ModalVote extends PureComponent {
     this.state = {
       flexComm: null,
       stake: null,
+      item: this.props.item,
     };
 
     this.changeStake = this.changeStake.bind(this);
@@ -20,8 +21,8 @@ export default class ModalVote extends PureComponent {
     this.setState({ stake: str });
   }
 
-  submitStake(str) {
-    api.getFlexComm(str)
+  submitStake(stake) {
+    api.getFlexComm(stake)
       .then((flexComm) => {
         this.setState({ flexComm });
       })
@@ -31,8 +32,7 @@ export default class ModalVote extends PureComponent {
   }
 
   render() {
-    const { flexComm } = this.state;
-    const { item } = this.props;
+    const { flexComm, item } = this.state;
 
     return (
       <div className="modal-vote">
@@ -49,7 +49,7 @@ export default class ModalVote extends PureComponent {
           />
         </div>
         <div className="commission-container flex">
-          <p className="fix-comm">{`Fix commission: ${item !== null ? item.vote.fixedFee : '-'}`}</p>
+          <p className="fix-comm">{`Fix commission: ${item.vote.fixedFee}`}</p>
           <p className="flex-comm">{`Flex commission: ${flexComm === null ? '-' : flexComm}`}</p>
         </div>
 

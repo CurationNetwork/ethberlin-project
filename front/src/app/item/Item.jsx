@@ -30,12 +30,23 @@ export default class Item extends PureComponent {
 
         <div className="info">
 
-          <div className="active-voting flex-v">
-            <span className="title t-medium">Active stage:</span>
-            <span className="value">{getStage(item.vote.startTime, item.vote.commitTtl, item.vote.revealTtl)}</span>
-            <span className="start-time">Start time: {moment(item.vote.startTime).format('DD-MM-YYYY HH:mm:ss')}</span>
-            <span className="time">left time 12:30:45</span>
-            <span className="prize">Prize: {item.balance}</span>
+          <div className="info-fields flex-h">
+            <p className="active-state">
+              <span className="active-state-title t-medium">Active stage:</span>
+              <span className="active-state-value">{getStage(item.vote.startTime, item.vote.commitTtl, item.vote.revealTtl)}</span>
+            </p>
+            <p className="start-time">
+              <span className="start-time-title t-medium">Start time:</span>
+              <span className="start-time-value">{moment(new Date(item.vote.startTime * 1000)).format('DD-MM-YYYY HH:mm:ss')}</span>
+            </p>
+            <p className="left-time">
+              <span className="left-time-title t-medium">Left time:</span>
+              <span className="left-time-value">12:30:45</span>
+            </p>
+            <p className="prize">
+              <span className="prize-title t-medium">Prize:</span>
+              <span className="prize-value">{item.balance}</span>
+            </p>
           </div>
 
           <div className="moving flex-v">

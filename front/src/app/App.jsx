@@ -7,6 +7,7 @@ import Loader from './common/loader/Loader';
 import Item from './item/Item';
 import ModalContainer from './common/modal/ModalContainer';
 import ModalVote from './modal-vote/ModalVote';
+import ModalAddItem from './modal-add-item/ModalAddItem';
 import * as api from './api/api';
 import "./App.less";
 
@@ -64,7 +65,7 @@ class App extends Component {
           </header>
 
           <div className="list">
-            <button className="add-item btn">
+            <button className="add-item btn" onClick={() => AppStore.addNewItem()}>
               <span className="plus">+</span>
               <span className="add">Add item</span>
             </button>
@@ -79,9 +80,9 @@ class App extends Component {
       <main className="app screen" id="app">
         {content}
         <ModalContainer
-          isOpen={AppStore.voteId !== null}
+          isOpen={AppStore.voteId !== null || AppStore.isAddNewItem !== null}
           classNameWindow="dashboard-modal"
-          onClose={() => AppStore.closeModalVote()}
+          onClose={() => AppStore.voteId !== null ? AppStore.closeModalVote() : AppStore.closeModalAddNewItem()}
           animationWindow={{
             duration: durationAnimation,
             styleStart: {
@@ -104,7 +105,10 @@ class App extends Component {
             size: 3,
           }}
         >
-          <ModalVote item={AppStore.items !== null ? AppStore.items.find((item) => item.id === AppStore.voteId) : null} />
+          {AppStore.voteId
+            ? <ModalVote item={AppStore.items !== null ? AppStore.items.find((item) => item.id === AppStore.voteId) : null} />
+            : <ModalAddItem />
+          }
         </ModalContainer>
       </main >
     );

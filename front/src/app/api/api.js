@@ -21,7 +21,7 @@ export const getVoting = (id) => {
   return new Promise((resolve, reject) => {
     resolve({
       fixedFee: 45,
-      dynamicFeeRate: 2, // multiple on stake = flex comm 
+      dynamicFeeRate: 2,
       unstakeSpeed: 12,
       commitTtl: 1536455276,
       revealTtl: 1536459276,
