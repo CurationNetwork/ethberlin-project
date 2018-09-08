@@ -41,13 +41,9 @@ contract IVoting {
      
 
     /**
-    @notice 
-     */
-    /**
-    @notice Determines if proposal has passed
-    @dev Check if votesFor out of totalVotes exceeds votesQuorum (requires pollEnded)
+    @notice Get poll result
     @param _pollID Integer identifier associated with target poll
     */
-    function isPassed(uint _pollID) view public returns (bool passed);
+    function pollResult(uint _pollID)  public view returns (PollResult result);
        
 }
