@@ -8,8 +8,10 @@ contract IVoting {
     }
 
     struct PollResult {
-        Vote[] winners;
-        Vote[] losers;
+        address[] winners_addresses;
+        uint[] winners_stake;
+        address[] losers_addresses;
+        uint[] losers_stake;
         uint direction;
     }
 
@@ -34,7 +36,7 @@ contract IVoting {
      /**
     @notice Reveals vote with choice and secret salt used in generating commitHash to attribute committed tokens
     @param _pollID Integer identifier associated with target poll
-    @param _voteOption Vote choice used to generate commitHash for associated poll
+    @param _voteOption Vote choice used to generate commitHash for associated poll. 0 - down, 1 - up
     @param _salt Secret number used to generate commitHash for associated poll
     */
     function revealVote(uint _pollID, uint _voteOption, uint _voteStake, uint _salt) public;
