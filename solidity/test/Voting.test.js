@@ -3,6 +3,10 @@ const { ethGetBalance } = require('../node_modules/zeppelin-solidity/test/helper
 const { latestTime } = require('../node_modules/zeppelin-solidity/test/helpers/latestTime');
 const { increaseTimeTo, duration } = require('../node_modules/zeppelin-solidity/test/helpers/increaseTime');
 const { advanceBlock } = require('../node_modules/zeppelin-solidity/test/helpers/advanceToBlock');
+const { expectThrow } = require('../node_modules/zeppelin-solidity/test/helpers/expectThrow');
+const { EVMRevert } = require('../node_modules/zeppelin-solidity/test/helpers/EVMRevert');
+
+
 const abi = require('ethereumjs-abi')
 
 
@@ -38,15 +42,17 @@ contract('Voting', function([_, owner, voter1, voter2]) {
         console.log("Transfer tokens")
         await this.token.transfer(voter1, 100000000);
         await this.token.transfer(voter2, 100000000);
+        await this.token.approve(this.voting.address, 1000000000, {from: voter1});
+        await this.token.approve(this.voting.address, 1000000000, {from: voter2});
     })
 
     describe('happy path vote', function() {
         it('start poll', async function() {
             var currentTime = await latestTime();
             console.log("Starting poll");
-            const pollId = await this.voting.startPoll.call(0, 1000, 2000, 1, 1, 100);
+            const pollId = await this.voting.startPoll.call(0, 1000, 2000, 1, 1, 1000);
 
-            await this.voting.startPoll(0, 1000, 2000, 1, 1, 100);
+            await this.voting.startPoll(0, 1000, 2000, 1, 1, 1000);
             await increaseTimeTo(currentTime + duration.seconds(100));
 
             pollId.should.be.bignumber.equal(1);
@@ -62,30 +68,37 @@ contract('Voting', function([_, owner, voter1, voter2]) {
             var secretVoter2 = utils.createVoteHash(0, 1000, salt);
            
             console.log(`Commit first vote ${secretVoter1}`);
-            await this.voting.commitVote(utils.bn(pollId), secretVoter1, {from: voter1});
+            await this.voting.commitVote(utils.bn(pollId), secretVoter1, voter1);
             console.log(`Commit second vote ${secretVoter2}`);
-            await this.voting.commitVote(utils.bn(pollId), secretVoter2, {from: voter2});
+            await this.voting.commitVote(utils.bn(pollId), secretVoter2, voter2);
 
             await increaseTimeTo(currentTime + duration.seconds(1001));
 
             console.log(`Reveal first vote ${secretVoter1}`);
 
-            await this.voting.revealVote(utils.bn(pollId), utils.bn(1), utils.bn(10000), utils.bn(salt), {from: voter1});
+            await this.voting.revealVote(utils.bn(pollId), utils.bn(1), utils.bn(10000), utils.bn(salt),  voter1);
             console.log(`Reveal second vote ${secretVoter2}`);
 
-            await this.voting.revealVote(utils.bn(pollId), utils.bn(0), utils.bn(1000), utils.bn(salt), {from: voter2});
+            await this.voting.revealVote(utils.bn(pollId), utils.bn(0), utils.bn(1000), utils.bn(salt), voter2);
 
-            await increaseTimeTo(currentTime + duration.seconds(1001));
-
-            var result = await this.voting.result.call(pollId);
+            await increaseTimeTo(currentTime + duration.seconds(4001));
+            console.log("Try get result");
+            var result = await this.voting.result.call(utils.bn(pollId));
 
             result.should.be.bignumber.equal(1);
+            console.log("Withdraw stake");
+            var bonus = await this.voting.withdrawStake.call(utils.bn(pollId), voter1, utils.bn(10000));
+            var prize = await this.voting.getWinnerPrize.call(utils.bn(pollId), voter1);
+            console.log(prize);
+            await this.voting.withdrawStake(utils.bn(pollId), voter1, utils.bn(10000));
+           
+            bonus.should.be.bignumber.gt(0);
 
-            
-
-            await this.voting.comitVote()
-            
-            //(await this.voting.pollExists(0)).should.be.equal(false);
+            await expectThrow(
+                this.voting.withdrawStake(utils.bn(pollId), voter1, utils.bn(1)), 
+                EVMRevert
+            );
+        
         })
     })
 })

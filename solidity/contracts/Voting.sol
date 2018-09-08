@@ -170,14 +170,14 @@ contract Voting is IVoting {
         return pollMap[_pollId].voteOptions[voter];
     }
     function enoughStake(uint _pollID, address _voter, uint _numTokens) public returns (bool) {
-        return pollMap[_pollID].withdrawedStakes[_voter] + _numTokens > pollMap[_pollID].lockedStakes[_voter];
+        return pollMap[_pollID].withdrawedStakes[_voter] + _numTokens <= pollMap[_pollID].lockedStakes[_voter];
 
     }
 
 
     function withdrawStake(uint _pollID, address _voter, uint _numTokens) public returns (uint _bonusPrize) {
         require(pollEnded(_pollID));
-       // require(enoughStake(_pollID, _voter, _numTokens), "not enough token to withdraw");
+        require(enoughStake(_pollID, _voter, _numTokens), "not enough token to withdraw");
         address voter = _voter;
         Poll poll = pollMap[_pollID];
 
@@ -197,6 +197,7 @@ contract Voting is IVoting {
       
         poll.withdrawedStakes[voter] += _numTokens;
         require(token.transfer(voter, _numTokens));
+        emit _StakeWithdrawed(_pollID, _voter, _numTokens);
         return returnedBonusPrize;
 
     }
@@ -204,12 +205,13 @@ contract Voting is IVoting {
 
  
     function getWinnerPrize(uint _pollId, address voter) public returns (uint prize, uint bonusPrize, bool isWinner ) {
+        Poll poll = pollMap[_pollId];
+
         uint vote = poll.voteOptions[voter] == 1? 1: 0; 
         uint votingResult = result(_pollId);
 
         if (vote == votingResult) {
             // winner
-            Poll poll = pollMap[_pollId];
             uint overallStakes = poll.votesFor + poll.votesAgainst;
             uint winnerPrize = poll.prize.mul(poll.lockedStakes[voter]).div(overallStakes);
             uint rBonusPrize = poll.bonus.mul(poll.lockedStakes[voter]).div(overallStakes);
