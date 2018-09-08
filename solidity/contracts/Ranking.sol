@@ -84,6 +84,11 @@ contract Ranking {
         _;
     }
 
+    modifier onlyExistMoving(uint movingId) {
+        require(Movings[movingId].startTime != 0);
+        _;
+    }
+
 
     /* VIEW FUNCTIONS */
     function getItemState(uint itemId)
@@ -214,6 +219,28 @@ contract Ranking {
         );
     }
 
+    function getMoving(uint movingId)
+        public
+        view
+        onlyExistVoting(votingId)
+        returns (
+            uint startTime,
+            uint speed,
+            uint distance,
+            uint direction,
+            uint votingId
+        )
+    {
+        Moving storage moving = Movings[movingId];
+        return (
+            moving.startTime,
+            moving.speed,
+            moving.distance,
+            moving.direction,
+            moving.votingId
+        );
+    }
+
 
     /* LISTING FUNCTIONS */
     function newItem(string name)
@@ -295,6 +322,8 @@ contract Ranking {
 
         item.movingsIds.push(newMoving(now, unstakeSpeed, distance, direction, item.votingId));
         item.votingId = 0;
+
+        removeOldMovings(itemId);
     }
 
     function unstake()
@@ -336,5 +365,39 @@ contract Ranking {
         moving.votingId = votingId;
 
         return movingId;
+    }
+
+    function removeOldMovings(uint itemId)
+        internal
+    {
+        Item storage item = Items[itemId];
+
+        for (uint i = 0; i < item.movingsIds.length; ++i) {
+            Moving storage moving = Movings[item.movingsIds[i]];
+
+            if ((now - moving.startTime) * moving.speed >= moving.distance) {
+                withdrawForAllVoters(moving.votingId);
+                delete Votings[moving.votingId];
+                delete Movings[item.movingsIds[i]];
+                item.movingsIds[i] = item.movingsIds[item.movingsIds.length - 1];
+                item.movingsIds.length--;
+                i--;
+            }
+        }
+    }
+
+    function withdrawForAllVoters(uint votingId)
+        internal
+    {
+        Voting storage voting = Votings[votingId];
+
+        for (uint i = 0; i < voting.votersAddresses.length; ++i) {
+            VoterInfo storage voter = voting.voters[voting.votersAddresses[i]];
+
+            if (voter.stake > voter.unstaked) {
+                votingContract.withdrawStake(voting.votersAddresses[i], voter.stake - voter.unstaked);
+                voter.unstaked = voter.stake;
+            }
+        }
     }
 }
