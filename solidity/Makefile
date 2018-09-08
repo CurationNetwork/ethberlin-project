@@ -8,7 +8,7 @@ installed_contracts:
 
 
 ganache.pid: node_modules
-	./node_modules/.bin/ganache-cli -u 0 -u 1 -u 2 -u 3 -u 4 -u 5 --gasLimit 1000000000000000 -e 100000000 --gasPrice 200 > ganache.log & echo $$! > $@
+	./node_modules/.bin/ganache-cli -u 0 -u 1 -u 2 -u 3 -u 4 -u 5 --gasLimit 10000000000000 -e 100000000 --gasPrice 2000 > ganache.log & echo $$! > $@
 	sleep 2
 
 build: node_modules installed_contracts 

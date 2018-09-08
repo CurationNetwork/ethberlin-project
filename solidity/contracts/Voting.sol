@@ -4,13 +4,13 @@ import "dll/DLL.sol";
 import "attrstore/AttributeStore.sol";
 import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "./IVoting.sol";
-import "zeppelin-solidity/contracts/tokens/ERC20/StandardToken.sol";
-
+import "zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
 /**
 @title Partial-Lock-Commit-Reveal Voting scheme with ERC20 tokens
 @author Team: Aspyn Palatnick, Cem Ozer, Yorke Rhodes
 */
 contract Voting is IVoting {
+  
 
     // ============
     // EVENTS:
@@ -28,11 +28,10 @@ contract Voting is IVoting {
     // ============
 
     using AttributeStore for AttributeStore.Data;
-    using DLL for DLL.Data;
     using SafeMath for uint;
 
   
- 
+    
 
     // ============
     // STATE VARIABLES:
@@ -43,11 +42,13 @@ contract Voting is IVoting {
     uint public pollNonce;
 
     mapping(address => uint) public voteTokenBalance; // maps user's address to voteToken balance
-    mapping(address => DLL.Data) dllMap;
     AttributeStore.Data store;
 
     EIP20Interface public token;
     address public fund;
+
+    constructor() public  {}
+
 
     /**
     @dev Initializer. Can only be called once.
@@ -102,9 +103,8 @@ contract Voting is IVoting {
     @notice Commits vote using hash of choice and secret salt to conceal vote until reveal
     @param _pollID Integer identifier associated with target poll
     @param _secretHash Commit keccak256 hash of voter's choice and salt (tightly packed in this order)
-    @param _prevPollID The ID of the poll that the user has voted the maximum number of tokens in which is still less than or equal to numTokens
     */
-    function commitVote(uint _pollID, bytes32 _secretHash, uint _prevPollID) public {
+    function commitVote(uint _pollID, bytes32 _secretHash) public {
         require(commitPeriodActive(_pollID));
 
         // prevent user from committing to zero node placeholder
@@ -199,6 +199,7 @@ contract Voting is IVoting {
         return returnedBonusPrize;
 
     }
+
 
  
     function getWinnerPrize(uint _pollId, address voter) public returns (uint prize, uint bonusPrize, bool isWinner ) {
@@ -374,14 +375,7 @@ contract Voting is IVoting {
         return store.getAttribute(attrUUID(_voter, _pollID), "numTokens");
     }
 
-    /**
-    @dev Gets top element of sorted poll-linked-list
-    @param _voter Address of user to check against
-    @return Integer identifier to poll with maximum number of tokens committed to it
-    */
-    function getLastNode(address _voter) constant public returns (uint pollID) {
-        return dllMap[_voter].getPrev(0);
-    }
+ 
 
    
 

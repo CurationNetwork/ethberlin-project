@@ -2,6 +2,7 @@ pragma solidity ^0.4.24;
 
 
 contract IVoting {
+    constructor() {}
 
     mapping(uint => Poll) public pollMap; // maps pollID to Poll struct
 
@@ -56,6 +57,7 @@ contract IVoting {
     */
     function revealVote(uint _pollID, uint _voteOption, uint _voteStake, uint _salt) public;
 
-    function withdrawStake(address voter, uint _numTokens) public returns(uint bonusPrize);
+    function withdrawStake(uint _pollID, address _voter, uint _numTokens) public returns (uint _bonusPrize);
+
 
 }

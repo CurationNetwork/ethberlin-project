@@ -456,7 +456,7 @@ contract Ranking {
             VoterInfo storage voter = voting.voters[voting.votersAddresses[i]];
 
             if (voter.stake > voter.unstaked) {
-                uint forTransfer = votingContract.withdrawStake(voting.votersAddresses[i], voter.stake - voter.unstaked);
+                uint forTransfer = votingContract.withdrawStake(votingId, voting.votersAddresses[i], voter.stake - voter.unstaked); 
                 require(token.transfer(voting.votersAddresses[i], forTransfer));
                 item.balance -= forTransfer;
                 voter.unstaked = voter.stake;
