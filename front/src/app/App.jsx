@@ -44,7 +44,21 @@ class App extends Component {
                         console.error(error);
                       });
                   } else {
-                    AppStore.putItems({ ...item, id });
+                    const ids = [];
+                    const promises = [];
+
+                    item.movingsIds.forEach(movId => {
+                      ids.push(movId);
+                      promises.push(api.getMoving(movId));
+                    });
+
+                    Promise.all(promises)
+                      .then((moving) => {
+                        AppStore.putItems({ ...item, id, moving });
+                      })
+                      .catch((error) => {
+                        console.error(error);
+                      });
                   }
                 })
                 .catch((error) => {
