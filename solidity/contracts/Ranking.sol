@@ -83,10 +83,25 @@ contract Ranking {
 
 
 
-    constructor(address votingContractAddress, address tokenAddress) public {
+    constructor(address votingContractAddress, address tokenAddress,
+                uint currentDynamicFeeRate_, uint dynamicFeePrecision_, uint fixedFeeMax_,
+                uint tMin_, uint unstakeSpeed0_, uint unstakeSpeedCoef_,
+                uint currentCommitTtl_, uint currentRevealTtl_
+    )
+        public
+    {
         votingContract = IVoting(votingContractAddress);
         token = EIP20Interface(tokenAddress);
         deployTime = now;
+
+        currentDynamicFeeRate = currentDynamicFeeRate_;
+        dynamicFeePrecision = dynamicFeePrecision_;
+        fixedFeeMax = fixedFeeMax_;
+        tMin = tMin_;
+        unstakeSpeed0 = unstakeSpeed0_;
+        unstakeSpeedCoef = unstakeSpeedCoef_;
+        currentCommitTtl = currentCommitTtl_;
+        currentRevealTtl = currentRevealTtl_;
     }
 
 
