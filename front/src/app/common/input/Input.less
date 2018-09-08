@@ -1,0 +1,49 @@
+@import  '../../../styles/variables.less';
+
+.component-input-container {
+    position: relative;
+
+    .component-input {
+        width: 100%;
+        height: 54px;
+        padding: 0 17px;
+
+        letter-spacing: .2px;
+
+        color: #0E1418;
+        border: none;
+        border-radius: 4px;
+        outline: none;
+        background-color: #E5E9F0;
+
+        font-family: @font-regular;
+        font-size: 20px;
+        line-height: 16px;
+
+        &.error {
+            box-shadow: inset 0 0 0 2px #FF3A71;
+        }
+
+        &.ok {
+            // box-shadow: inset 0 0 0 2px blueviolet;
+        }
+
+        &:focus {
+            box-shadow: inset 0 0 0 2px #0C7186;
+        }
+    }
+
+    .component-input-icon {
+        position: absolute;
+        top: 26px;
+        right: 17px;
+
+        display: none;
+
+        width: 24px;
+
+        &.ok {
+            display: block;
+        }
+    }
+}

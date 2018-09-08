@@ -6,7 +6,7 @@ import AppStore from "../store/AppStore";
 import Loader from './common/loader/Loader';
 import Item from './item/Item';
 import ModalContainer from './common/modal/ModalContainer';
-
+import ModalVote from './modal-vote/ModalVote';
 import "./App.less";
 
 @observer
@@ -28,17 +28,23 @@ class App extends Component {
         <div className="main-container">
 
           <header className="header flex-v">
-
             <div className="logo">
               <p className="cur">curation.</p>
               <p className="net">network</p>
             </div>
-
-            <button className="add-item btn">Add item</button>
-
+            <div className="overlay" />
           </header>
 
           <div className="list">
+            <button className="add-item btn">
+              <span className="plus">+</span>
+              <span className="add">Add item</span>
+            </button>
+            <Item />
+            <Item />
+            <Item />
+            <Item />
+            <Item />
             <Item />
           </div>
 
@@ -76,13 +82,7 @@ class App extends Component {
             size: 3,
           }}
         >
-          <div className="vote-container">
-            <h2 className="title">Voting</h2>
-
-            <div className="input-wrapper">
-              <p className="caption t-medium">Stake:</p>
-            </div>
-          </div>
+          <ModalVote />
         </ModalContainer>
       </main >
     );

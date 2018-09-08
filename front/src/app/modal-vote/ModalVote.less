@@ -1,0 +1,64 @@
+@import '../../styles/variables.less';
+
+.modal-vote {
+    width: 600px;
+    padding: 40px;
+
+    .title {
+        margin: 0;
+        margin-bottom: 22px;
+
+        color: #0D6678;
+
+        font-family: @font-bold;
+        font-size: 30px;
+        line-height: 40px;
+    }
+
+    .caption {
+        margin-bottom: 10px;
+    }
+
+    .commission-container {
+        margin-top: 10px;
+        .fix-comm, .flex-comm {
+            display: block;
+
+            width: 50%;
+        }
+    }
+
+    .v-stake-container {
+        margin-top: 35px;
+
+        .equal, .plus {
+            margin-top: 35px;
+            padding: 0 7px;
+
+            color: gray;
+
+            font-family: @font-light;
+            font-size: 30px;
+        }
+        .input-voiting-stake {
+            // width: 200px;
+        }
+    }
+
+    .submit {
+        width: 100%;
+        height: 80px;
+        margin-top: 60px;
+
+        color: #0C7186;
+        border-radius: 6px;
+        background-color: #E7F1F3;
+
+        font-family: @font-medium;
+        font-size: 23px;
+
+        &:hover {
+            background-color: darken(#E7F1F3, 10);
+        }
+    }
+}
