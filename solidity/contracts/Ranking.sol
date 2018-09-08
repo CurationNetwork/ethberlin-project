@@ -347,7 +347,7 @@ contract Ranking {
             voting.voters[voting.votersAddresses[i]].prize += tmp;
 
             if (!voting.voters[voting.votersAddresses[i]].isWinner)
-                votingContract.withdrawStake(voting.votersAddresses[i], voting.voters[voting.votersAddresses[i]].stake);
+                votingContract.withdrawStake(voting.pollId, voting.votersAddresses[i], voting.voters[voting.votersAddresses[i]].stake);
         }
 
         tmp = newMoving(now, unstakeSpeed, distance, direction, Items[itemId].votingId);
@@ -372,7 +372,7 @@ contract Ranking {
                 VoterInfo storage voterInfo = voting.voters[msg.sender];
                 if (voterInfo.stake > voterInfo.unstaked) {
                     if ((now - moving.startTime) * moving.speed >= moving.distance) {
-                        uint forTransfer = votingContract.withdrawStake(msg.sender, voterInfo.stake - voterInfo.unstaked);
+                        uint forTransfer = votingContract.withdrawStake(moving.votingId, msg.sender, voterInfo.stake - voterInfo.unstaked);
                         require(token.transfer(msg.sender, forTransfer));
                         item.balance -= forTransfer;
                         voterInfo.unstaked = voterInfo.stake;
@@ -381,7 +381,7 @@ contract Ranking {
                         uint forUnstake = (voterInfo.stake / moving.distance) * moving.speed * (now - moving.startTime);
 
                         if (forUnstake > voterInfo.unstaked) {
-                            uint forTransfer2 = votingContract.withdrawStake(msg.sender, forUnstake - voterInfo.unstaked);
+                            uint forTransfer2 = votingContract.withdrawStake(moving.votingId, msg.sender, forUnstake - voterInfo.unstaked);
                             require(token.transfer(msg.sender, forTransfer2));
                             item.balance -= forTransfer2;
                             voterInfo.unstaked = forUnstake;
