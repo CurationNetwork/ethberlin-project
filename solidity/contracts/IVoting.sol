@@ -25,6 +25,8 @@ contract IVoting {
 
     function getVoteOption(uint _pollId, address voter) public view returns (uint);
 
+    function getWinnerPrize(uint _pollId, address voter) public returns (uint);
+
     /**
     @dev Initiates a poll with canonical configured parameters at pollID emitted by PollCreated event
     @param _itemId - item for voting 
