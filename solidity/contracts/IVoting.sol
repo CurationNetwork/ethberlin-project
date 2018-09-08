@@ -2,17 +2,23 @@ pragma solidity ^0.4.24;
 
 
 contract IVoting {
-    struct Vote {
-        address voter;
-        uint stake;
-    }
 
-    struct PollResult {
-        address[] winners_addresses;
-        uint[] winners_stake;
-        address[] losers_addresses;
-        uint[] losers_stake;
-        uint direction;
+    mapping(uint => Poll) public pollMap; // maps pollID to Poll struct
+
+  
+    struct Poll {
+        uint itemId;
+        uint commitEndDate;     /// expiration date of commit period for poll
+        uint revealEndDate;     /// expiration date of reveal period for poll
+        uint votesFor;		    /// tally of votes supporting proposal
+        uint votesAgainst;      /// tally of votes countering proposal
+        uint voteFee;
+        uint revealRateFee;
+        uint prize;
+        mapping(address => bool) didCommit;   /// indicates whether an address committed a vote for this poll
+        mapping(address => bool) didReveal;   /// indicates whether an address revealed a vote for this poll
+        mapping(address => uint) voteOptions; /// stores the voteOption of an address that revealed
+        mapping(address => uint) lockedStakes; ///
     }
 
     /**
@@ -42,10 +48,5 @@ contract IVoting {
     function revealVote(uint _pollID, uint _voteOption, uint _voteStake, uint _salt) public;
      
 
-    /**
-    @notice Get poll result
-    @param _pollID Integer identifier associated with target poll
-    */
-    function pollResult(uint _pollID)  public view returns (PollResult result);
        
 }
