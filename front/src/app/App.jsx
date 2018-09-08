@@ -24,9 +24,18 @@ class App extends Component {
       content = <Loader />;
     } else {
       content = (
-        <div className="list">
-          <button className="add-item btn">Add item</button>
-          <Item />
+        <div className="main-container">
+
+          <header className="header">
+            <div className="logo">
+            </div>
+            <button className="add-item btn">Add item</button>
+          </header>
+
+          <div className="list">
+            <Item />
+          </div>
+
         </div>
       );
     }

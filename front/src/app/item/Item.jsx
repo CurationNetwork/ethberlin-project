@@ -10,6 +10,7 @@ export default class Item extends PureComponent {
         <div className="text">
           <p>Some text</p>
         </div>
+        <button className="voit btn">Voit</button>
       </section>
     );
   }
