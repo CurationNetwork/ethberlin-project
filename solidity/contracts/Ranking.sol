@@ -40,6 +40,7 @@ contract Ranking {
 
     struct Item {
         string name;
+        string description;
         address owner;
         uint lastRank;
         uint balance;
@@ -61,9 +62,9 @@ contract Ranking {
 
     uint stakesCounter;
     uint maxRank;
-    uint avgStake;
     uint deployTime;
     uint votingCount;
+    uint avgStake = 1;
 
     IVoting votingContract;
     EIP20Interface token;
@@ -151,9 +152,9 @@ contract Ranking {
     {
         Voting storage voting = Votings[votingId];
 
-        if (voting.startTime + voting.commitTtl + voting.revealTtl > now)
+        if (voting.startTime + voting.commitTtl + voting.revealTtl < now)
             return VotingState.Finished;
-        if (voting.startTime + voting.commitTtl > now)
+        if (voting.startTime + voting.commitTtl < now)
             return VotingState.Revealing;
 
         return VotingState.Commiting;
@@ -235,6 +236,7 @@ contract Ranking {
         onlyExistItem(itemId)
         returns (
             string name,
+            string description,
             address owner,
             uint lastRank,
             uint balance,
@@ -245,6 +247,7 @@ contract Ranking {
         Item storage item = Items[itemId];
         return (
             item.name,
+            item.description,
             item.owner,
             item.lastRank,
             item.balance,
@@ -327,13 +330,14 @@ contract Ranking {
 
 
     /* LISTING FUNCTIONS */
-    function newItem(string name)
+    function newItem(string name, string desc)
         public
     {
         Item storage item = Items[ItemsLastId];
         ItemsIds.push(ItemsLastId++);
 
         item.name = name;
+        item.description = desc;
         item.owner = msg.sender;
     }
 
@@ -360,10 +364,10 @@ contract Ranking {
 
             Votings[item.votingId].pollId = votingContract.startPoll(
                 itemId,
-                voting.commitTtl,
-                voting.revealTtl,
-                voting.fixedFee,
-                voting.dynamicFeeRate,
+                Votings[item.votingId].commitTtl,
+                Votings[item.votingId].revealTtl,
+                Votings[item.votingId].fixedFee,
+                Votings[item.votingId].dynamicFeeRate,
                 item.balance
             );
         }
@@ -371,10 +375,11 @@ contract Ranking {
         require(getVotingState(item.votingId) == VotingState.Commiting);
 
         Voting storage voting = Votings[item.votingId];
+        voting.votersAddresses.push(msg.sender);
 
         voting.commissions += getFixedCommission(itemId);
 
-        votingContract.commitVote(voting.pollId, commitment);
+        votingContract.commitVote(voting.pollId, commitment, msg.sender);
     }
 
     function voteReveal(uint itemId, uint8 direction, uint stake, uint salt)
@@ -388,7 +393,6 @@ contract Ranking {
         Voting storage voting = Votings[item.votingId];
         voting.commissions += getDynamicCommission(item.votingId, stake);
 
-        voting.votersAddresses.push(msg.sender);
         VoterInfo storage voterInfo = voting.voters[msg.sender];
         voterInfo.stake = stake;
         voterInfo.direction = direction;
