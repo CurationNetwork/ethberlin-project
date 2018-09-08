@@ -94,11 +94,14 @@ contract Voting is IVoting {
         emit _VotingRightsWithdrawn(_numTokens, msg.sender);
     }
 
+    function commitVote(uint _pollID, bytes32 _secretHash, address voter) public {
+        msg.sender = voter;
+        commitVote(_pollID, _secretHash, voter);
+    }
 
     // =================
     // VOTING INTERFACE:
     // =================
-
     /**
     @notice Commits vote using hash of choice and secret salt to conceal vote until reveal
     @param _pollID Integer identifier associated with target poll
