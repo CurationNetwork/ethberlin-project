@@ -4,6 +4,7 @@ import "dll/DLL.sol";
 import "attrstore/AttributeStore.sol";
 import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "./IVoting.sol";
+import "zeppelin-solidity/contracts/tokens/ERC20/StandardToken.sol";
 
 /**
 @title Partial-Lock-Commit-Reveal Voting scheme with ERC20 tokens
