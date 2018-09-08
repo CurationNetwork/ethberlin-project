@@ -82,8 +82,9 @@ contract Ranking {
     uint currentRevealTtl;
 
 
+    constructor() public {}
 
-    constructor(address votingContractAddress, address tokenAddress,
+    function init(address votingContractAddress, address tokenAddress,
                 uint currentDynamicFeeRate_, uint dynamicFeePrecision_, uint fixedFeeMax_,
                 uint tMin_, uint unstakeSpeed0_, uint unstakeSpeedCoef_,
                 uint currentCommitTtl_, uint currentRevealTtl_
