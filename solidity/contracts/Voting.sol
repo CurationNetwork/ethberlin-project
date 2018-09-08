@@ -10,7 +10,7 @@ import "zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
 @author Team: Aspyn Palatnick, Cem Ozer, Yorke Rhodes
 */
 contract Voting is IVoting {
-  
+   
 
     // ============
     // EVENTS:
@@ -22,6 +22,7 @@ contract Voting is IVoting {
     event _VotingRightsGranted(uint numTokens, address indexed voter);
     event _VotingRightsWithdrawn(uint numTokens, address indexed voter);
     event _TokensRescued(uint indexed pollID, address indexed voter);
+    event _StakeWithdrawed(uint indexed pollID, address indexed voter, uint numTokens);
 
     // ============
     // DATA STRUCTURES:
@@ -94,10 +95,7 @@ contract Voting is IVoting {
         emit _VotingRightsWithdrawn(_numTokens, msg.sender);
     }
 
-    function commitVote(uint _pollID, bytes32 _secretHash, address voter) public {
-        msg.sender = voter;
-        commitVote(_pollID, _secretHash, voter);
-    }
+  
 
     // =================
     // VOTING INTERFACE:
@@ -107,7 +105,7 @@ contract Voting is IVoting {
     @param _pollID Integer identifier associated with target poll
     @param _secretHash Commit keccak256 hash of voter's choice and salt (tightly packed in this order)
     */
-    function commitVote(uint _pollID, bytes32 _secretHash) public {
+    function commitVote(uint _pollID, bytes32 _secretHash, address voter) public {
         require(commitPeriodActive(_pollID));
 
         // prevent user from committing to zero node placeholder
@@ -115,17 +113,17 @@ contract Voting is IVoting {
         // prevent user from committing a secretHash of 0
         require(_secretHash != 0);
 
-
-        //  require(validPosition(_prevPollID, nextPollID, msg.sender, _numTokens));
-
-        bytes32 UUID = attrUUID(msg.sender, _pollID);
+        bytes32 UUID = attrUUID(voter, _pollID);
 
         store.setAttribute(UUID, "commitHash", uint(_secretHash));
 
-        pollMap[_pollID].didCommit[msg.sender] = true;
-        payFee(_pollID, calculateCommitFee(_pollID));
+        pollMap[_pollID].didCommit[voter] = true;
+        payFee(_pollID, calculateCommitFee(_pollID), voter);
 
-        emit _VoteCommitted(_pollID, msg.sender);
+        emit _VoteCommitted(_pollID, voter);
+    }
+    function revealVote(uint _pollID, uint _voteOption, uint _voteStake, uint _salt) public {
+        revealVote(_pollID, _voteOption, _voteStake, _salt, msg.sender);
     }
 
     /**
@@ -134,17 +132,18 @@ contract Voting is IVoting {
     @param _voteOption Vote choice used to generate commitHash for associated poll
     @param _salt Secret number used to generate commitHash for associated poll
     */
-    function revealVote(uint _pollID, uint _voteOption, uint _voteStake, uint _salt) public {
+
+    function revealVote(uint _pollID, uint _voteOption, uint _voteStake, uint _salt, address _voter) public {
         // make sure msg.sender has enough voting rights
         
         // Make sure the reveal period is active
         require(revealPeriodActive(_pollID));
-        require(pollMap[_pollID].didCommit[msg.sender]);                         // make sure user has committed a vote for this poll
-        require(!pollMap[_pollID].didReveal[msg.sender]);                        // prevent user from revealing multiple times
-        require(keccak256(abi.encodePacked(_voteOption, _voteStake, _salt)) == getCommitHash(msg.sender, _pollID)); // compare resultant hash from inputs to original commitHash
+        require(pollMap[_pollID].didCommit[_voter]);                         // make sure user has committed a vote for this poll
+        require(!pollMap[_pollID].didReveal[_voter]);                        // prevent user from revealing multiple times
+        require(keccak256(abi.encodePacked(_voteOption, _voteStake, _salt)) == getCommitHash(_voter, _pollID)); // compare resultant hash from inputs to original commitHash
 
         uint fee = calculateRevealFee(_pollID, _voteStake);
-        payFee(_pollID, fee);
+        payFee(_pollID, fee, _voter);
 
         requestVotingRights(_pollID, _voteStake);
         
@@ -162,7 +161,7 @@ contract Voting is IVoting {
         pollMap[_pollID].didReveal[msg.sender] = true;
         pollMap[_pollID].voteOptions[msg.sender] = _voteOption;
 
-        emit _VoteRevealed(_pollID, _voteStake, pollMap[_pollID].votesFor, pollMap[_pollID].votesAgainst, _voteOption, msg.sender, _salt);
+        emit _VoteRevealed(_pollID, _voteStake, pollMap[_pollID].votesFor, pollMap[_pollID].votesAgainst, _voteOption, _voter, _salt);
     }
 
     function getPollResult(uint _pollId) public view returns (uint votesFor, uint votesAgainst) {
@@ -177,9 +176,10 @@ contract Voting is IVoting {
 
     }
 
+
     function withdrawStake(uint _pollID, address _voter, uint _numTokens) public returns (uint _bonusPrize) {
         require(pollEnded(_pollID));
-        require(enoughStake(_pollID, _voter, _numTokens), "not enough token to withdraw");
+       // require(enoughStake(_pollID, _voter, _numTokens), "not enough token to withdraw");
         address voter = _voter;
         Poll poll = pollMap[_pollID];
 
@@ -234,6 +234,7 @@ contract Voting is IVoting {
     function startPoll(uint _itemId, uint _commitDuration, uint _revealDuration, uint _voteFee, uint _revealFeeRate, uint _bonus) public returns (uint pollID) {
         require(_revealFeeRate > 0);
         pollNonce = pollNonce + 1;
+
 
         uint commitEndDate = block.timestamp.add(_commitDuration);
         uint revealEndDate = commitEndDate.add(_revealDuration);
@@ -411,10 +412,10 @@ contract Voting is IVoting {
     // ===============
     /**
      */
-    function payFee(uint _pollID, uint _fee) private {
+    function payFee(uint _pollID, uint _fee, address voter) private {
         require(pollExists(_pollID));
-        require(token.balanceOf(msg.sender) >= _fee);
-        require(token.transferFrom(msg.sender, this, _fee));
+        require(token.balanceOf(voter) >= _fee);
+        require(token.transferFrom(voter, this, _fee));
         pollMap[_pollID].prize += _fee;
     }
 
