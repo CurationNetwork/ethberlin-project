@@ -2,6 +2,7 @@ import React, { PureComponent } from 'react';
 import AppStore from '../../store/AppStore';
 import { getStage, getDataFromSec } from '../../helpers/utils';
 import moment from 'moment';
+import { toJS } from 'mobx';
 import './Item.less';
 
 export default class Item extends PureComponent {
@@ -17,6 +18,7 @@ export default class Item extends PureComponent {
 
   render() {
     const { item } = this.props;
+    const itemObj = toJS(item);
 
     return (
       <section className="item">

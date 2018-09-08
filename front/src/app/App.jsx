@@ -34,7 +34,6 @@ class App extends Component {
 
                         Promise.all(promises)
                           .then((moving) => {
-                            console.log({ ...item, id, vote, moving })
                             AppStore.putItems({ ...item, id, vote, moving });
                           })
                           .catch((error) => {
