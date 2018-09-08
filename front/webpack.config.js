@@ -127,6 +127,7 @@ module.exports = env => {
             name: "static/media/fonts/[name].[ext]"
           }
         },
+
         {
           test: /\.md$/,
           loader: "file-loader",
