@@ -92,27 +92,6 @@ contract Voting is IVoting {
         emit _VotingRightsWithdrawn(_numTokens, msg.sender);
     }
 
-    /**
-    // @dev Unlocks tokens locked in unrevealed vote where poll has ended
-    // @param _pollID Integer identifier associated with the target poll
-    // */
-    // function rescueTokens(uint _pollID) public {
-    //     require(isExpired(pollMap[_pollID].revealEndDate));
-    //     require(lockedTokens[_pollId][msg.sender] != 0);
-        
-    //     emit _TokensRescued(_pollID, msg.sender);
-    // }
-
-    // /**
-    // @dev Unlocks tokens locked in unrevealed votes where polls have ended
-    // @param _pollIDs Array of integer identifiers associated with the target polls
-    // */
-    // function rescueTokensInMultiplePolls(uint[] _pollIDs) public {
-    //     // loop through arrays, rescuing tokens from all
-    //     for (uint i = 0; i < _pollIDs.length; i++) {
-    //         rescueTokens(_pollIDs[i]);
-    //     }
-    // }
 
     // =================
     // VOTING INTERFACE:
@@ -199,26 +178,37 @@ contract Voting is IVoting {
         uint vote = poll.voteOptions[voter] == 1? 1: 0; 
         uint votingResult = result(_pollID);
 
-        if (vote == votingResult) {
-            // winner
-            if(! poll.prizePayed[voter]) {
-                sendWinnerPrize(_pollID, voter);
-                poll.prizePayed[voter] = true;
+        if(! poll.prizePayed[voter]) {
+            (uint prize, bool isWinner) = getWinnerPrize(_pollID, voter);
+            if (isWinner) {
+                require(token.transfer(voter,  prize));
             } 
+            poll.prizePayed[voter] = true;
         } 
+      
         
         uint stake = poll.lockedStakes[voter];
         require(token.transfer(voter, stake));
 
     }
 
-    function sendWinnerPrize(uint _pollID, address voter) private view {
-        Poll poll = pollMap[_pollID];
-        uint overallStakes = poll.votesFor + poll.votesAgainst;
-        uint winnerPrize = poll.prize.mul(poll.lockedStakes[voter]).div(overallStakes);
-        require(token.transfer(voter, winnerPrize));
-        
+ 
+    function getWinnerPrize(uint _pollId, address voter) public returns (uint prize, bool isWinner ) {
+        uint vote = poll.voteOptions[voter] == 1? 1: 0; 
+        uint votingResult = result(_pollId);
+
+        if (vote == votingResult) {
+            // winner
+            Poll poll = pollMap[_pollId];
+            uint overallStakes = poll.votesFor + poll.votesAgainst;
+            uint winnerPrize = poll.prize.mul(poll.lockedStakes[voter]).div(overallStakes);
+            return (winnerPrize, true);
+        } else {
+            return (0, false);
+        }
     }
+
+
 
 
 
