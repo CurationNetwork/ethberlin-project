@@ -23,7 +23,6 @@ class App extends Component {
                   if (item.votingId !== 0) {
                     api.getVoting(id)
                       .then((vote) => {
-                        console.log({ ...item, id, vote })
                         AppStore.putItems({ ...item, id, vote });
                       })
                       .catch((error) => {
@@ -83,7 +82,6 @@ class App extends Component {
           isOpen={AppStore.voteId !== null}
           classNameWindow="dashboard-modal"
           onClose={() => AppStore.closeModalVote()}
-          //TODO: correct animation
           animationWindow={{
             duration: durationAnimation,
             styleStart: {
@@ -106,7 +104,7 @@ class App extends Component {
             size: 3,
           }}
         >
-          <ModalVote />
+          <ModalVote item={AppStore.items !== null ? AppStore.items.find((item) => item.id === AppStore.voteId) : null} />
         </ModalContainer>
       </main >
     );

@@ -1,18 +1,19 @@
 import React, { PureComponent } from 'react';
 import Input from '../common/input/Input';
 import './ModalVote.less';
+import * as api from '../api/api';
 
 export default class ModalVote extends PureComponent {
   constructor(props) {
     super(props);
 
     this.state = {
-      fixComm: null,
       flexComm: null,
       stake: null,
     };
 
     this.changeStake = this.changeStake.bind(this);
+    this.submitStake = this.submitStake.bind(this);
   }
 
   changeStake(str) {
@@ -20,9 +21,9 @@ export default class ModalVote extends PureComponent {
   }
 
   submitStake(str) {
-    getData
-      .then((response) => {
-        code
+    api.getFlexComm(str)
+      .then((flexComm) => {
+        this.setState({ flexComm });
       })
       .catch((error) => {
         console.error(error);
@@ -30,7 +31,8 @@ export default class ModalVote extends PureComponent {
   }
 
   render() {
-    const { fixComm, flexComm } = this.state;
+    const { flexComm } = this.state;
+    const { item } = this.props;
 
     return (
       <div className="modal-vote">
@@ -41,12 +43,13 @@ export default class ModalVote extends PureComponent {
           <Input
             className="custom-input"
             autofocus={true}
+            onValidate={(str) => /^\d+$/.test(str)}
             onChange={this.changeStake}
-          // onSubmit={}
+            onSubmit={this.submitStake}
           />
         </div>
         <div className="commission-container flex">
-          <p className="fix-comm">{`Fix commission: ${fixComm === null ? '-' : fixComm}`}</p>
+          <p className="fix-comm">{`Fix commission: ${item !== null ? item.vote.fixedFee : '-'}`}</p>
           <p className="flex-comm">{`Flex commission: ${flexComm === null ? '-' : flexComm}`}</p>
         </div>
 

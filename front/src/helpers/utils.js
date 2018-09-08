@@ -21,3 +21,13 @@ export const getTimeSec = () => {
   return nowStr.substr(0, nowStr.length - 3);
 }
 
+window.rr = getTimeSec;
+
+
+export const getDataFromSec = (timeSec) => {
+  const date = new Date(timeSec * 1000);
+
+  return `${date.getDay()}/${date.getMonth()}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+}
+
+window.tt = getDataFromSec;

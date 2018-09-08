@@ -19,6 +19,25 @@ export default class Input extends React.PureComponent {
 
     this.onKeyPress = this.onKeyPress.bind(this);
     this.onChange = this.onChange.bind(this);
+    this.onBlur = this.onBlur.bind(this);
+  }
+
+  onBlur() {
+    // this.props.onBlur(this.state.value)
+    const { onValidate = null, onSubmit } = this.props;
+    const { value } = this.state;
+
+    if (onValidate != null) {
+      if (onValidate(value)) {
+        onSubmit(value);
+        this.setState({ stateInput: 'ok' });
+      } else {
+        this.setState({ stateInput: 'error' });
+      }
+    } else {
+      onSubmit(value);
+      this.setState({ stateInput: 'ok' });
+    }
   }
 
   onKeyPress(event) {
@@ -79,6 +98,7 @@ export default class Input extends React.PureComponent {
         <input
           onKeyPress={this.onKeyPress}
           onChange={this.onChange}
+          onBlur={this.onBlur}
           value={value}
           className={classNames('component-input', className, {
             error: stateInput === 'error',

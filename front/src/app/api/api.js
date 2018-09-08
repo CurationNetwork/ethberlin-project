@@ -34,3 +34,9 @@ export const getVoting = (id) => {
     })
   })
 }
+
+export const getFlexComm = (stake) => {
+  return new Promise((resolve, reject) => {
+    resolve(12432321)
+  })
+}
