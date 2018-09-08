@@ -1,7 +1,36 @@
 @import '../styles/variables.less';
 
 .app {
-    .list {
-        padding: 25px;
+    background-color: #E6E9F0;
+
+    .main-container {
+        .header {
+            justify-content: space-between;
+
+            height: 150px;
+
+            background: linear-gradient(90deg, #00A29B 0%, #004B71 130%);
+
+            .logo {
+                margin-left: 50px;
+
+                color: white;
+
+                font-size: 39px;
+                line-height: 42px;
+
+                .cur {
+                    font-family: @font-bold;
+                }
+
+                .net {
+                    font-family: @font-light;
+                }
+            }
+        }
+
+        .list {
+            padding: 25px;
+        }
     }
 }

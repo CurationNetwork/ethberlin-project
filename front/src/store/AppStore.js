@@ -7,13 +7,12 @@ export const screens = {
 export class AppStore {
   @observable currentScreen;
   @observable items;
+  @observable voteId;
 
   constructor() {
     this.currentScreen = screens.MAIN;
-    // this.items = [{
-
-    // }]
     this.items = null;
+    this.voteId = null;
   }
 
   @action("set currentScreen")
@@ -22,8 +21,13 @@ export class AppStore {
   }
 
   @action("put itemData")
-  setCurrentScreen(items) {
+  putItems(items) {
     this.items = items;
+  }
+
+  @action("open modal vote")
+  putItems(voteId) {
+    this.voteId = voteId;
   }
 }
 

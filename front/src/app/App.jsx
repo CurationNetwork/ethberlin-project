@@ -12,24 +12,28 @@ import "./App.less";
 class App extends Component {
   componentDidMount() {
     //TODO: get itemData
+    setTimeout(() => AppStore.putItems([]), 2000);
   }
 
   render() {
     const items = AppStore.items;
     let content;
 
-    console.log(items)
-
-    if (items !== null) {
+    if (items === null) {
       content = <Loader />;
     } else {
       content = (
         <div className="main-container">
 
-          <header className="header">
+          <header className="header flex-v">
+
             <div className="logo">
+              <p className="cur">curation.</p>
+              <p className="net">network</p>
             </div>
+
             <button className="add-item btn">Add item</button>
+
           </header>
 
           <div className="list">
