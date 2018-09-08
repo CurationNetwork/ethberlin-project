@@ -60,25 +60,27 @@ contract Ranking {
 
 
     uint stakesCounter;
-    uint currentDynamicFeeRate;
-    uint dynamicFeePrecision;
-    uint systemBank;
-
     uint maxRank;
-    uint fixesCommissionMax;
-
     uint avgStake;
     uint deployTime;
-    uint tMin;
     uint votingCount;
+
+    IVoting votingContract;
+    EIP20Interface token;
+
+
+    /* constants */
+    uint currentDynamicFeeRate;
+    uint dynamicFeePrecision;
+    uint fixedFeeMax;
+
+    uint tMin;
     uint unstakeSpeed0;
-    uint unstakeSpeedFix;
+    uint unstakeSpeedCoef;
 
     uint currentCommitTtl;
     uint currentRevealTtl;
 
-    IVoting votingContract;
-    EIP20Interface token;
 
 
     constructor(address votingContractAddress, address tokenAddress) public {
@@ -153,7 +155,7 @@ contract Ranking {
         if (totalRank < maxRank)
             dRank = maxRank - totalRank;
 
-        return fixesCommissionMax / dRank;
+        return fixedFeeMax / dRank;
     }
 
     function getDynamicCommission(uint votingId, uint stake)
@@ -200,7 +202,7 @@ contract Ranking {
         view
         returns (uint)
     {
-        return unstakeSpeed0 + tMin * votingCount * unstakeSpeedFix / avgStake;
+        return unstakeSpeed0 + tMin * votingCount * unstakeSpeedCoef / avgStake;
     }
 
     function getItems()
