@@ -2,7 +2,7 @@ pragma solidity ^0.4.24;
 
 
 contract IVoting {
-    constructor() {}
+    constructor() public {}
 
     mapping(uint => Poll) public pollMap; // maps pollID to Poll struct
 

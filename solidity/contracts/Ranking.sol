@@ -58,13 +58,24 @@ contract Ranking {
     uint MovingsLastId = 1;
     mapping (uint => Moving) Movings;
 
-    uint avgStake;
+
     uint stakesCounter;
-    uint dynamicFeeRate;
+    uint currentDynamicFeeRate;
+    uint dynamicFeePrecision;
     uint systemBank;
-    uint unstakeSpeed;
-    uint commitTtl;
-    uint revealTtl;
+
+    uint maxRank;
+    uint fixesCommissionMax;
+
+    uint avgStake;
+    uint deployTime;
+    uint tMin;
+    uint votingCount;
+    uint unstakeSpeed0;
+    uint unstakeSpeedFix;
+
+    uint currentCommitTtl;
+    uint currentRevealTtl;
 
     IVoting votingContract;
     EIP20Interface token;
@@ -73,6 +84,7 @@ contract Ranking {
     constructor(address votingContractAddress, address tokenAddress) public {
         votingContract = IVoting(votingContractAddress);
         token = EIP20Interface(tokenAddress);
+        deployTime = now;
     }
 
 
@@ -135,8 +147,13 @@ contract Ranking {
         onlyExistItem(itemId)
         returns (uint)
     {
-        //TODO calc fixed commission
-        return 1;
+        uint dRank = 1;
+        uint totalRank = getTotalRank(itemId);
+
+        if (totalRank < maxRank)
+            dRank = maxRank - totalRank;
+
+        return fixesCommissionMax / dRank;
     }
 
     function getDynamicCommission(uint votingId, uint stake)
@@ -145,8 +162,45 @@ contract Ranking {
         onlyExistVoting(votingId)
         returns (uint)
     {
-        //TODO calc dynamic commission
-        return 1;
+        return stake * currentDynamicFeeRate / dynamicFeePrecision;
+    }
+
+    function getTotalRank(uint itemId)
+        public
+        view
+        onlyExistItem(itemId)
+        returns (uint)
+    {
+        Item storage item = Items[itemId];
+
+        uint rank = item.lastRank;
+
+        for (uint i = 0; i < item.movingsIds.length; ++i) {
+            Moving storage moving = Movings[item.movingsIds[i]];
+
+            if ((now - moving.startTime) * moving.speed >= moving.distance) {
+                if (moving.direction != 0)
+                    rank += moving.distance;
+                else
+                    rank -= moving.distance;
+            }
+            else {
+                if (moving.direction != 0)
+                    rank += (now - moving.startTime) * moving.speed;
+                else
+                    rank -= (now - moving.startTime) * moving.speed;
+            }
+        }
+
+        return rank;
+    }
+
+    function getUnstakeSpeed()
+        public
+        view
+        returns (uint)
+    {
+        return unstakeSpeed0 + tMin * votingCount * unstakeSpeedFix / avgStake;
     }
 
     function getItems()
@@ -322,6 +376,10 @@ contract Ranking {
         voterInfo.direction = direction;
 
         votingContract.revealVote(voting.pollId, direction, stake, salt);
+
+        stakesCounter++;
+
+        avgStake = avgStake + (stake - 1) / stakesCounter;
     }
 
     function finishVoting(uint itemId)
@@ -333,7 +391,9 @@ contract Ranking {
 
         Voting storage voting = Votings[Items[itemId].votingId];
 
-        var (votesUp, votesDown) = votingContract.getPollResult(voting.pollId);
+        uint votesUp;
+        uint votesDown;
+        (votesUp, votesDown) = votingContract.getPollResult(voting.pollId);
 
         uint direction = votesUp > votesDown ? 1 : 0;
         uint distance = votesUp > votesDown ? votesUp - votesDown : votesDown - votesUp;
@@ -350,7 +410,7 @@ contract Ranking {
                 votingContract.withdrawStake(voting.pollId, voting.votersAddresses[i], voting.voters[voting.votersAddresses[i]].stake);
         }
 
-        tmp = newMoving(now, unstakeSpeed, distance, direction, Items[itemId].votingId);
+        tmp = newMoving(now, getUnstakeSpeed(), distance, direction, Items[itemId].votingId);
 
         Items[itemId].movingsIds.push(tmp);
         Items[itemId].votingId = 0;
@@ -403,10 +463,12 @@ contract Ranking {
 
         voting.startTime = now;
         voting.fixedFee = getFixedCommission(itemId);
-        voting.unstakeSpeed = unstakeSpeed;
-        voting.commitTtl = commitTtl;
-        voting.revealTtl = revealTtl;
-        voting.dynamicFeeRate = dynamicFeeRate;
+        voting.unstakeSpeed = getUnstakeSpeed();
+        voting.commitTtl = currentCommitTtl;
+        voting.revealTtl = currentRevealTtl;
+        voting.dynamicFeeRate = currentDynamicFeeRate;
+
+        votingCount++;
 
         return votingId;
     }
@@ -437,6 +499,15 @@ contract Ranking {
 
             if ((now - moving.startTime) * moving.speed >= moving.distance) {
                 withdrawForAllVoters(moving.votingId, itemId);
+
+                if (moving.direction != 0)
+                    item.lastRank += moving.distance;
+                else
+                    item.lastRank -= moving.distance;
+
+                if (maxRank < item.lastRank)
+                    maxRank = item.lastRank;
+
                 delete Votings[moving.votingId];
                 delete Movings[item.movingsIds[i]];
                 item.movingsIds[i] = item.movingsIds[item.movingsIds.length - 1];
