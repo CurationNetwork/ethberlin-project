@@ -5,8 +5,51 @@ import './IVoting.sol';
 
 
 contract Ranking {
+    event VotingStarted(
+        uint itemId,
+        uint votingId,
+        uint startTime
+    );
+
+    event VoteCommit(
+        uint itemId,
+        uint votingId,
+        address voter
+    );
+
+    event VoteReveal(
+        uint itemId,
+        uint votingId,
+        address voter,
+        uint direction,
+        uint stake
+    );
+
+    event VotingFinished(
+        uint itemId,
+        uint votingId
+    );
+
+    event MovingStarted(
+        uint itemId,
+        uint votingId,
+        uint movingId,
+        uint startTime,
+        uint distance,
+        uint direction,
+        uint speed
+    );
+
+    event MovingRemoved(
+        uint itemId,
+        uint votingId,
+        uint movingId
+    );
+
+
     enum ItemState { None, Voting }
     enum VotingState { Commiting, Revealing, Finished }
+
 
     struct VoterInfo {
         uint direction;
@@ -363,6 +406,8 @@ contract Ranking {
         if (item.votingId == 0) {
             item.votingId = newVoting(itemId);
 
+            emit VotingStarted(itemId, item.votingId, now);
+
             Votings[item.votingId].pollId = votingContract.startPoll(
                 itemId,
                 Votings[item.votingId].commitTtl,
@@ -381,6 +426,8 @@ contract Ranking {
         voting.commissions += getFixedCommission(itemId);
 
         votingContract.commitVote(voting.pollId, commitment, msg.sender);
+
+        emit VoteCommit(itemId, item.votingId, msg.sender);
     }
 
     function voteReveal(uint itemId, uint8 direction, uint stake, uint salt)
@@ -401,8 +448,9 @@ contract Ranking {
         votingContract.revealVote(voting.pollId, direction, stake, salt, msg.sender);
 
         stakesCounter++;
-
         avgStake = avgStake + (stake - 1) / stakesCounter;
+
+        emit VoteReveal(itemId, item.votingId, msg.sender, direction, stake);
     }
 
     function finishVoting(uint itemId)
@@ -436,11 +484,14 @@ contract Ranking {
         }
 
         tmp = newMoving(now, getUnstakeSpeed(), distance, direction, Items[itemId].votingId);
+        emit MovingStarted(itemId, Items[itemId].votingId, tmp, now, distance, direction, getUnstakeSpeed());
 
         Items[itemId].movingsIds.push(tmp);
         Items[itemId].votingId = 0;
 
         removeOldMovings(itemId);
+
+        emit VotingFinished(itemId, Items[itemId].votingId);
     }
 
     function unstake(uint itemId)
@@ -532,6 +583,8 @@ contract Ranking {
 
                 if (maxRank < item.lastRank)
                     maxRank = item.lastRank;
+
+                emit MovingRemoved(itemId, moving.votingId, item.movingsIds[i]);
 
                 delete Votings[moving.votingId];
                 delete Movings[item.movingsIds[i]];
