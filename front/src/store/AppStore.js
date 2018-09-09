@@ -1,4 +1,6 @@
 import { observable, action } from "mobx";
+import * as api from '../app/api/api';
+import { prepareFromArr } from '../helpers/utils';
 
 export const screens = {
   MAIN: "main"
@@ -24,21 +26,119 @@ export class AppStore {
 
   @action("put itemData")
   putItems(itemObject = []) {
-    if (!this.items) {
-      this.items = [];
-    }
+    api.getItemIds()
+      .then((ids) => {
+        if (Array.isArray(ids) && ids.length > 0) {
+          ids.map((id) => id.toString()).forEach(id => {
+            api.getItem(id)
+              .then((item) => {
+                item = { ...prepareFromArr(item, 'item'), id };
+                if (item.votingId !== '0') {
+                  api.getVoting(item.votingId)
+                    .then((vote) => {
+                      vote = prepareFromArr(vote, 'voting');
 
-    const index = this.items.findIndex((item) => item.id === itemObject.id);
+                      const ids = [];
+                      const promises = [];
 
-    if (index !== -1) {
-      this.items[index] = { ...this.items[index], ...itemObject }
-    } else {
-      if (itemObject.length === 0) {
-        this.items = [];
-      } else {
-        this.items.push(itemObject)
-      }
-    }
+                      item.movingsIds.forEach(movId => {
+                        ids.push(movId);
+                        promises.push(api.getMoving(movId));
+                      });
+
+                      Promise.all(promises)
+                        .then((moving) => {
+                          moving = moving.map((mov) => prepareFromArr(mov, 'mov'))
+                          const itemObject = { ...item, id, vote, moving };
+
+                          if (!this.items) {
+                            this.items = [];
+                          }
+
+                          const index = this.items.findIndex((item) => item.id === id);
+
+                          if (index !== -1) {
+                            this.items[index] = { ...this.items[index], ...itemObject }
+                          } else {
+                            if (itemObject.length === 0) {
+                              this.items = [];
+                            } else {
+                              this.items.push(itemObject)
+                            }
+                          }
+                          // AppStore.putItems({ ...item, id, vote, moving });
+                        })
+                        .catch((error) => {
+                          console.error(error);
+                        });
+                    })
+                    .catch((error) => {
+                      console.error(error);
+                    });
+                } else {
+                  const ids = [];
+                  const promises = [];
+
+                  item.movingsIds.forEach(movId => {
+                    ids.push(movId);
+                    promises.push(api.getMoving(movId));
+                  });
+
+                  Promise.all(promises)
+                    .then((moving) => {
+                      moving = moving.map((mov) => prepareFromArr(mov, 'mov'))
+
+                      const itemObject = { ...item, id, moving };
+
+                      if (!this.items) {
+                        this.items = [];
+                      }
+
+                      const index = this.items.findIndex((item) => item.id === id);
+
+                      if (index !== -1) {
+                        this.items[index] = { ...this.items[index], ...itemObject }
+                      } else {
+                        if (itemObject.length === 0) {
+                          this.items = [];
+                        } else {
+                          this.items.push(itemObject)
+                        }
+                      }
+                    })
+                    .catch((error) => {
+                      console.error(error);
+                    });
+                }
+              })
+              .catch((error) => {
+                console.error(error);
+              });
+          });
+        } else {
+
+          const itemObject = [];
+
+          if (!this.items) {
+            this.items = [];
+          }
+
+          const index = this.items.findIndex((item) => item.id === id);
+
+          if (index !== -1) {
+            this.items[index] = { ...this.items[index], ...itemObject }
+          } else {
+            if (itemObject.length === 0) {
+              this.items = [];
+            } else {
+              this.items.push(itemObject)
+            }
+          }
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      })
   };
 
   @action("open modal vote")

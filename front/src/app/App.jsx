@@ -8,79 +8,12 @@ import Item from './item/Item';
 import ModalContainer from './common/modal/ModalContainer';
 import ModalVote from './modal-vote/ModalVote';
 import ModalAddItem from './modal-add-item/ModalAddItem';
-import * as api from './api/api';
-import { prepareFromArr } from '../helpers/utils';
 import "./App.less";
 
 @observer
 class App extends Component {
   componentDidMount() {
-    setTimeout(() =>
-      api.getItemIds()
-        .then((ids) => {
-          if (Array.isArray(ids) && ids.length > 0) {
-            ids.map((id) => id.toString()).forEach(id => {
-              api.getItem(id)
-                .then((item) => {
-                  item = { ...prepareFromArr(item, 'item'), id };
-                  if (item.votingId !== '0') {
-                    api.getVoting(item.votingId)
-                      .then((vote) => {
-                        vote = prepareFromArr(vote, 'voting');
-
-                        const ids = [];
-                        const promises = [];
-
-                        item.movingsIds.forEach(movId => {
-                          ids.push(movId);
-                          promises.push(api.getMoving(movId));
-                        });
-
-                        Promise.all(promises)
-                          .then((moving) => {
-                            moving = moving.map((mov) => prepareFromArr(mov, 'mov'))
-
-                            AppStore.putItems({ ...item, id, vote, moving });
-                          })
-                          .catch((error) => {
-                            console.error(error);
-                          });
-                      })
-                      .catch((error) => {
-                        console.error(error);
-                      });
-                  } else {
-                    const ids = [];
-                    const promises = [];
-
-                    item.movingsIds.forEach(movId => {
-                      ids.push(movId);
-                      promises.push(api.getMoving(movId));
-                    });
-
-                    Promise.all(promises)
-                      .then((moving) => {
-                        moving = moving.map((mov) => prepareFromArr(mov, 'mov'))
-
-                        AppStore.putItems({ ...item, id, moving });
-                      })
-                      .catch((error) => {
-                        console.error(error);
-                      });
-                  }
-                })
-                .catch((error) => {
-                  console.error(error);
-                });
-            });
-          } else {
-            AppStore.putItems();
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        })
-      , 2000);
+    AppStore.putItems();
   }
 
   render() {
@@ -99,7 +32,6 @@ class App extends Component {
               <p className="cur">curation.</p>
               <p className="net">network</p>
             </div>
-            {/* <div className="overlay" /> */}
           </header>
 
           <div className="list">

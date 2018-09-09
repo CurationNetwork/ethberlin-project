@@ -54,19 +54,26 @@ export const readContract = (contractAddress, funcName, params) => {
 }
 
 export const waitTransaction = (txHash) => {
-
-  return new Promise((resolve, reject) => {
-
-
-
-
-    const func = () => web3.eth.getTransactionReceipt(txHash, (err, receipt) => {
-      if (null == receipt) { }
-      window.setTimeout(() => getTxReceipt(txHash), 500);
-      else {
-  cb(receipt);
-}
+  const func = (txHash, cb) =>
+    web3.eth.getTransactionReceipt(txHash, (err, receipt) => {
+      if (receipt == null) {
+        setTimeout(() => func(txHash, cb), 1000);
+      } else {
+        cb(receipt);
+      }
     });
 
+  return new Promise((resolve, reject) => {
+    func(txHash, resolve);
   })
+};
+
+
+export const getTxReceipt = (txHash, cb) => {
+  web3.eth.getTransactionReceipt(txHash, (err, receipt) => {
+    if (null == receipt) window.setTimeout(() => getTxReceipt(txHash, cb), 500);
+    else {
+      cb(receipt);
+    }
+  });
 };

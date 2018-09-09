@@ -1,6 +1,21 @@
 .modal-add-item {
+    position: relative;
+
     width: 600px;
     padding: 40px;
+
+    .overlay {
+        position: absolute;
+        z-index: 100;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+
+        opacity: .7;
+        border-radius: 24px;
+        background-color: #FFFFFF;
+    }
 
     .title {
         margin: 0 0 30px 0;

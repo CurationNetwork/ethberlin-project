@@ -2,7 +2,10 @@ import React, { PureComponent } from 'react';
 import Input from '../common/input/Input';
 import './ModalVote.less';
 import classNames from 'classnames';
+import { waitTransaction } from '../../helpers/eth';
 import { getStage } from '../../helpers/utils';
+import AppStore from '../../store/AppStore';
+import Loader from '../common/loader-2/Loader';
 import * as api from '../api/api';
 
 export default class ModalVote extends PureComponent {
@@ -15,6 +18,7 @@ export default class ModalVote extends PureComponent {
       stake: null,
       item: this.props.item,
       direction: 'up',
+      isLoader: false,
     };
 
     this.changeStake = this.changeStake.bind(this);
@@ -69,7 +73,20 @@ export default class ModalVote extends PureComponent {
       .then((result) => {
         api.commitVote(this.props.item.id, result)
           .then((res) => {
-            localStorage.setItem(`vote_data_${this.props.item.id}`, JSON.stringify({ flexComm, fixCom, stake, direction }));
+            localStorage.setItem(`vote_data_${this.props.item.id}`,
+              JSON.stringify({ flexComm, fixCom, stake, direction }));
+            this.setState({ isLoader: true });
+
+            waitTransaction(res)
+              .then((result) => {
+                AppStore.closeModalVote();
+                AppStore.putItems();
+
+              })
+              .catch((error) => {
+                console.error(error);
+              });
+
           })
           .catch((error) => {
             console.error(error);
@@ -93,11 +110,19 @@ export default class ModalVote extends PureComponent {
       }
     }
 
-    console.log(item.id, data.direction === 'up' ? 1 : 0, data.stake)
-
     api.voteReveal(item.id, data.direction === 'up' ? 1 : 0, data.stake)
       .then((result) => {
-        console.log(result)
+        this.setState({ isLoader: true });
+
+        waitTransaction(result)
+          .then((result) => {
+            AppStore.closeModalVote();
+            AppStore.putItems();
+
+          })
+          .catch((error) => {
+            console.error(error);
+          });
       })
       .catch((error) => {
         console.error(error);
@@ -106,7 +131,7 @@ export default class ModalVote extends PureComponent {
 
 
   render() {
-    const { flexComm, direction, fixCom, item } = this.state;
+    const { flexComm, direction, fixCom, item, isLoader } = this.state;
 
     let content;
     let btn;
@@ -192,6 +217,11 @@ export default class ModalVote extends PureComponent {
 
     return (
       <div className="modal-vote">
+        {isLoader &&
+          <div className="overlay flex">
+            <Loader size={80} />
+          </div>
+        }
         <h2 className="title">Voting</h2>
         {content}
         {btn}
