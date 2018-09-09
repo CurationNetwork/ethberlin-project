@@ -1,8 +1,8 @@
 module.exports = {
   networks: {
     development: {
-      host: "localhost",
-      port: 8545,
+      host: "curation.mixbytes.io/ganache",
+      port: 80,
       network_id: "*" // Match any network id
     },
 
