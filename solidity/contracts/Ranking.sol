@@ -219,10 +219,9 @@ contract Ranking {
         return fixedFeeMax / dRank;
     }
 
-    function getDynamicCommission(uint votingId, uint stake)
+    function getDynamicCommission(uint stake)
         public
         view
-        onlyExistVoting(votingId)
         returns (uint)
     {
         return stake * currentDynamicFeeRate / dynamicFeePrecision;
@@ -372,6 +371,14 @@ contract Ranking {
         );
     }
 
+    function getCommitHash(uint direction, uint stake, uint salt)
+        public
+        view
+        returns (bytes32)
+    {
+        return sha3(direction, stake, salt);
+    }
+
 
     /* LISTING FUNCTIONS */
     function newItem(string name, string desc)
@@ -439,7 +446,7 @@ contract Ranking {
         require(getVotingState(item.votingId) == VotingState.Revealing);
 
         Voting storage voting = Votings[item.votingId];
-        voting.commissions += getDynamicCommission(item.votingId, stake);
+        voting.commissions += getDynamicCommission(stake);
 
        VoterInfo storage voterInfo = voting.voters[msg.sender];
         voterInfo.stake = stake;

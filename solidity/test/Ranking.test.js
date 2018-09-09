@@ -74,8 +74,12 @@ contract('Ranking', function(accounts) {
         });
 
         it('voting commit', async function() {
-            await this.ranking.voteCommit(2, hash(0, 10, 0), {from: voters[0]});
-            await this.ranking.voteCommit(2, hash(1, 20, 0), {from: voters[1]});
+
+            let comm1 = await this.ranking.getCommitHash(0, 10, 0);
+            let comm2 = await this.ranking.getCommitHash(1, 20, 0);
+
+            await this.ranking.voteCommit(2, comm1, {from: voters[0]});
+            await this.ranking.voteCommit(2, comm2, {from: voters[1]});
 
             let item = await this.ranking.getItem.call(2);
             let voting = await this.ranking.getVoting.call(item[5]);

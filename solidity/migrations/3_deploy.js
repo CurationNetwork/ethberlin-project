@@ -15,12 +15,15 @@ module.exports = async function(deployer, network, accounts) {
         return SimpleToken.new();
     }).then(function(instance) {
         token = instance;
+        console.log('Token:', token.address);
         return Voting.new();
     }).then(function(instance) {
         voting = instance;
+        console.log('Voting:', voting.address);
         return Ranking.new();
     }).then(function(instance) {
         ranking = instance;
+        console.log('Ranking:', ranking.address);
 
         voting.init(token.address, accounts[1]).then(function () {
             return ranking.init(voting.address, token.address, ...rankingParams)
