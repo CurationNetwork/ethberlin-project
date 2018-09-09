@@ -46,7 +46,8 @@ contract IVoting {
     @param _pollID Integer identifier associated with target poll
     @param _secretHash Commit keccak256 hash of voter's choice and salt (tightly packed in this order)
     */
-    function commitVote(uint _pollID, bytes32 _secretHash) public;
+    function commitVote(uint _pollID, bytes32 _secretHash, address voter) public;
+
 
 
     /**
@@ -55,7 +56,7 @@ contract IVoting {
     @param _voteOption Vote choice used to generate commitHash for associated poll. 0 - down, 1 - up
     @param _salt Secret number used to generate commitHash for associated poll
     */
-    function revealVote(uint _pollID, uint _voteOption, uint _voteStake, uint _salt) public;
+    function revealVote(uint _pollID, uint _voteOption, uint _voteStake, uint _salt, address _voter) public;
 
     function withdrawStake(uint _pollID, address _voter, uint _numTokens) public returns (uint _bonusPrize);
 
