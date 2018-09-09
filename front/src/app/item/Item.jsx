@@ -28,7 +28,9 @@ export default class Item extends PureComponent {
     return (
       <section className="item">
         <div className="item-wrapper">
-          <div className="img"></div>
+          <div className="img">
+            <img className="img" src={require(`../../assets/pic/${item.id}.png`)} alt="" />
+          </div>
 
           <div className="main-info">
             <h2 className="title">{item.name}</h2>

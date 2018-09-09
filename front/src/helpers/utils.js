@@ -88,3 +88,15 @@ export const prepareFromArr = (arr, type) => {
       break;
   }
 }
+
+
+export const getPicName = (pic) => {
+  switch (pic) {
+    case value:
+
+      break;
+
+    default:
+      break;
+  }
+}
