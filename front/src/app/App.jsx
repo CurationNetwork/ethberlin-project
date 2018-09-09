@@ -9,6 +9,7 @@ import ModalContainer from './common/modal/ModalContainer';
 import ModalVote from './modal-vote/ModalVote';
 import ModalAddItem from './modal-add-item/ModalAddItem';
 import * as api from './api/api';
+import { prepareFromArr } from '../helpers/utils';
 import "./App.less";
 
 @observer
@@ -18,12 +19,15 @@ class App extends Component {
       api.getItemIds()
         .then((ids) => {
           if (Array.isArray(ids) && ids.length > 0) {
-            ids.forEach(id => {
+            ids.map((id) => id.toString()).forEach(id => {
               api.getItem(id)
                 .then((item) => {
-                  if (item.votingId !== 0) {
-                    api.getVoting(id)
+                  item = { ...prepareFromArr(item, 'item'), id };
+                  if (item.votingId !== '0') {
+                    api.getVoting(item.votingId)
                       .then((vote) => {
+                        vote = prepareFromArr(vote, 'voting');
+
                         const ids = [];
                         const promises = [];
 
@@ -34,6 +38,8 @@ class App extends Component {
 
                         Promise.all(promises)
                           .then((moving) => {
+                            moving = moving.map((mov) => prepareFromArr(mov, 'mov'))
+
                             AppStore.putItems({ ...item, id, vote, moving });
                           })
                           .catch((error) => {
@@ -54,6 +60,8 @@ class App extends Component {
 
                     Promise.all(promises)
                       .then((moving) => {
+                        moving = moving.map((mov) => prepareFromArr(mov, 'mov'))
+
                         AppStore.putItems({ ...item, id, moving });
                       })
                       .catch((error) => {
@@ -65,12 +73,14 @@ class App extends Component {
                   console.error(error);
                 });
             });
+          } else {
+            AppStore.putItems();
           }
         })
         .catch((error) => {
           console.error(error);
         })
-      , 0);
+      , 2000);
   }
 
   render() {
@@ -93,10 +103,13 @@ class App extends Component {
           </header>
 
           <div className="list">
-            <button className="add-item btn" onClick={() => AppStore.addNewItem()}>
-              <span className="plus">+</span>
-              <span className="add">Add item</span>
-            </button>
+            <div className="top-bar flex-v">
+              <h1 className="title-main">Token Curated Ranking</h1>
+              <button className="add-item btn" onClick={() => AppStore.addNewItem()}>
+                <span className="plus">+</span>
+                <span className="add">Add item</span>
+              </button>
+            </div>
             {items.map((item, i) => <Item key={i} item={item} />)}
           </div>
 

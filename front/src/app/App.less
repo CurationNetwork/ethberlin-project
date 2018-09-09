@@ -53,44 +53,55 @@
             overflow-y: auto;
             flex: 1;
 
-            padding: 25px;
+            padding: 35px 55px;
 
+            .top-bar {
+                justify-content: space-between;
 
-            .add-item {
-                width: 160px;
-                height: 50px;
                 margin-bottom: 25px;
 
-                border: 2px solid lightgray;
-                border-radius: 6px;
-                background-color: #E6E9F0;
+                .title-main {
+                    color: darken(gray, 20);
 
-                .plus, .add {
-                    color: lightgray;
+                    font-size: 32px;
                 }
 
-                .plus {
-                    margin-right: 6px;
-                    margin-bottom: 3px;
+                .add-item {
+                    width: 180px;
+                    height: 50px;
 
-                    font-family: @font-light;
-                    font-size: 20px;
-                }
-
-                .add {
-                    text-transform: uppercase;
-
-                    font-family: @font-regular;
-                    font-size: 15px;
-                }
-
-                &:hover {
-                    border: 2px solid #2F97A0;
+                    border: 2px solid lightgray;
+                    border-radius: 6px;
+                    background-color: #E6E9F0;
 
                     .plus, .add {
-                        color: #2F97A0;
+                        color: lightgray;
+                    }
+
+                    .plus {
+                        margin-right: 6px;
+                        margin-bottom: 3px;
+
+                        font-family: @font-light;
+                        font-size: 20px;
+                    }
+
+                    .add {
+                        text-transform: uppercase;
+
+                        font-family: @font-regular;
+                        font-size: 15px;
+                    }
+
+                    &:hover {
+                        border: 2px solid #2F97A0;
+
+                        .plus, .add {
+                            color: #2F97A0;
+                        }
                     }
                 }
+                ;
             }
         }
     }

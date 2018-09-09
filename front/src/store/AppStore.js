@@ -23,18 +23,22 @@ export class AppStore {
   }
 
   @action("put itemData")
-  putItems(itemObject) {
+  putItems(itemObject = []) {
     if (!this.items) {
       this.items = [];
     }
+
     const index = this.items.findIndex((item) => item.id === itemObject.id);
 
     if (index !== -1) {
       this.items[index] = { ...this.items[index], ...itemObject }
     } else {
-      this.items.push(itemObject)
+      if (itemObject.length === 0) {
+        this.items = [];
+      } else {
+        this.items.push(itemObject)
+      }
     }
-
   };
 
   @action("open modal vote")
