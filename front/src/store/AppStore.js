@@ -11,12 +11,15 @@ export class AppStore {
   @observable items;
   @observable voteId;
   @observable isAddNewItem;
+  @observable currentBalance;
+  @observable currentAccount;
 
   constructor() {
     this.currentScreen = screens.MAIN;
     this.items = null;
     this.voteId = null;
     this.isAddNewItem = null;
+    this.currentBalance = null;
   }
 
   @action("set currentScreen")
@@ -159,6 +162,16 @@ export class AppStore {
   @action("close modal vote")
   closeModalVote() {
     this.voteId = null;
+  }
+
+  @action("set balance")
+  setBalance(balance) {
+    this.currentBalance = balance;
+  }
+
+  @action("set account")
+  setAccount(account) {
+    this.currentAccount = account;
   }
 }
 

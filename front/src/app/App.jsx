@@ -8,16 +8,32 @@ import Item from './item/Item';
 import ModalContainer from './common/modal/ModalContainer';
 import ModalVote from './modal-vote/ModalVote';
 import ModalAddItem from './modal-add-item/ModalAddItem';
+import * as api from './api/api';
+import { prepareFromArr } from '../helpers/utils';
+import { getBalance, currentAccount } from '../helpers/eth';
 import "./App.less";
 
 @observer
 class App extends Component {
   componentDidMount() {
     AppStore.putItems();
+
+    setInterval(() => {
+        currentAccount().then(acc => {
+            AppStore.setAccount(acc);
+        });
+
+        getBalance().then(balance => {
+          AppStore.setBalance(balance);
+        })
+    }, 1000);
   }
+
 
   render() {
     const items = AppStore.items;
+    const balance = AppStore.currentBalance || "";
+    const account = AppStore.currentAccount || "";
     const durationAnimation = 200;
     let content;
 
@@ -32,6 +48,14 @@ class App extends Component {
               <p className="cur">curation.</p>
               <p className="net">network</p>
             </div>
+            <div className="balance">
+              <p className="address">{account.slice(0, 5) + '...' + account.slice(-5, account.length)}</p>
+              <p>
+                <span className="tokens">{balance}</span>
+                <span className="sym">CRN</span>
+              </p>
+            </div>
+            {/* <div className="overlay" /> */}
           </header>
 
           <div className="list">

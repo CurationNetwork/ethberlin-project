@@ -1,8 +1,10 @@
 import abi from '../constants/Ranking.js';
+import tokenAbi from '../constants/Token.js';
 
 export let web3 = window.Web3 ? new window.Web3(window.web3.currentProvider) : undefined;
 
-const address = '0xfc3e510ae60ce7a72845ff1ad59226be862731cb';
+const address = '0x4ff2764c3e809716f724efd79bcaafb5ae117596';
+const tokenAddress = '0x745f33b18d24675509e151c1517f353bfd1521e5';
 
 
 export const sendTransaction = (contractAddress) => {
@@ -77,3 +79,35 @@ export const getTxReceipt = (txHash, cb) => {
     }
   });
 };
+
+
+export const currentAccount = () => {
+    return new Promise((resolve, reject) => {
+      web3.eth.getAccounts((err, res) => {
+        if (err)
+            reject(err);
+        resolve(res[0]);
+      });
+    });
+}
+
+export const getBalance = () => {
+  const token = web3.eth.contract(tokenAbi.abi).at(tokenAddress);
+
+  return new Promise((resolve, reject) => {
+    try {
+      currentAccount().then(account => {
+          token['balanceOf']([account], (error, result) => {
+            if (error) {
+              console.error(error);
+              reject(error);
+            } else {
+              resolve(result.div("1000000000000000000").toString());
+            }
+          });
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
