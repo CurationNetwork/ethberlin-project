@@ -1,5 +1,6 @@
-## Elevator Pitch
-Token curated consensus-driven tamperproof ranking of blockchain projects
+Elevator Pitch
+--------------
+**Token curated consensus-driven tamperproof ranking of blockchain projects**
 
 ## Inspiration
 Blockchain industry is:
