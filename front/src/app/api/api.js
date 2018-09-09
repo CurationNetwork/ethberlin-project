@@ -1,7 +1,7 @@
 import { readContract } from '../../helpers/eth';
 import { requestsConfig } from '../../../config/config';
 
-const address = '0x8656c0be9cdaac1ee80df991ac89ee157095ce69';
+const address = '0xa79e596b452c89d0be35675d9f8ecf39a0a6e2fd';
 
 export const getItemIds = () => {
   return !requestsConfig.USE_MOCK
