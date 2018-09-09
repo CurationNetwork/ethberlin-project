@@ -25,15 +25,18 @@ module.exports = async function(deployer, network, accounts) {
         ranking = instance;
         console.log('Ranking:', ranking.address);
 
-        voting.init(token.address, accounts[1]).then(function () {
-            return ranking.init(voting.address, token.address, ...rankingParams)
-        }).then(async function () {
-            for (let i = 0; i < accounts.length; ++i) {
-                await token.approve(voting.address, approveAmount, { from: accounts[i] });
-                await token.approve(ranking.address, approveAmount, { from: accounts[i] });
-                await token.transfer(accounts[i], approveAmount);
-            }
-        })
-    });
+        return voting.init(token.address, accounts[1]);
+    }).then(function () {
+        console.log('Voting init');
+        return ranking.init(voting.address, token.address, ...rankingParams);
+    }).then(async function () {
+        console.log('Ranking init');
+
+        for (let i = 0; i < accounts.length; ++i) {
+            await token.approve(voting.address, approveAmount, { from: accounts[i] });
+            await token.approve(ranking.address, approveAmount, { from: accounts[i] });
+            await token.transfer(accounts[i], approveAmount);
+        }
+    }).catch(e => console.log(e));
 
 };
