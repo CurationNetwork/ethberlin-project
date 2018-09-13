@@ -1,6 +1,7 @@
 Elevator Pitch
 --------------
 **Token curated consensus-driven tamperproof ranking of blockchain projects**
+Live demo: http://curation.mixbytes.io/
 
 ## Inspiration
 Blockchain industry is:
