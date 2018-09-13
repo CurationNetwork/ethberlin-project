@@ -10,7 +10,7 @@ import "zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
 @author Team: Aspyn Palatnick, Cem Ozer, Yorke Rhodes
 */
 contract Voting is IVoting {
-   
+
 
     // ============
     // EVENTS:
@@ -31,8 +31,20 @@ contract Voting is IVoting {
     using AttributeStore for AttributeStore.Data;
     using SafeMath for uint;
 
-  
-    
+    mapping(uint => Poll) public pollMap; // maps pollID to Poll struct
+
+    struct Poll {
+        uint itemId;
+        uint commitEndDate;     /// expiration date of commit period for poll
+        uint revealEndDate;     /// expiration date of reveal period for poll
+        uint votesFor;		    /// tally of votes supporting proposal
+        uint votesAgainst;      /// tally of votes countering proposal
+        mapping(address => bool) didCommit;   /// indicates whether an address committed a vote for this poll
+        mapping(address => bool) didReveal;   /// indicates whether an address revealed a vote for this poll
+        mapping(address => uint) voteOptions; /// stores the voteOption of an address that revealed
+        mapping(address => uint) lockedStakes; ///
+        mapping(address => uint) withdrawedStakes;
+    }
 
     // ============
     // STATE VARIABLES:
@@ -45,22 +57,13 @@ contract Voting is IVoting {
     mapping(address => uint) public voteTokenBalance; // maps user's address to voteToken balance
     AttributeStore.Data store;
 
-    EIP20Interface public token;
-    address public fund;
-
     constructor() public  {}
 
 
     /**
     @dev Initializer. Can only be called once.
-    @param _token The address where the ERC20 token contract is deployed
     */
-    function init(address _token, address _fund) public {
-        require(_token != address(0) && address(token) == address(0));
-        require(_fund != address(0) && address(fund) == address(0));
-
-        token = EIP20Interface(_token);
-        fund = _fund;
+    function init() public {
         pollNonce = INITIAL_POLL_NONCE;
     }
 
@@ -74,10 +77,8 @@ contract Voting is IVoting {
     @param _numTokens The number of votingTokens desired in exchange for ERC20 tokens
     */
     function requestVotingRights(uint _pollId, uint _numTokens, address _voter) private {
-        
-        require(token.balanceOf(_voter) >= _numTokens);
+
         pollMap[_pollId].lockedStakes[_voter] += _numTokens;
-        require(token.transferFrom(_voter, this, _numTokens));
         emit _VotingRightsGranted(_numTokens, _voter);
     }
 
@@ -90,12 +91,10 @@ contract Voting is IVoting {
 
         require(availableTokens >= _numTokens, "not enought tokens to withdraw rights");
         pollMap[_pollId].lockedStakes[msg.sender] -= _numTokens;
-        uint fee = calculateRevealFee(_pollId, _numTokens);
-        require(token.transfer(msg.sender, fee));
         emit _VotingRightsWithdrawn(_numTokens, msg.sender);
     }
 
-  
+
 
     // =================
     // VOTING INTERFACE:
@@ -118,11 +117,10 @@ contract Voting is IVoting {
         store.setAttribute(UUID, "commitHash", uint(_secretHash));
 
         pollMap[_pollID].didCommit[voter] = true;
-        payFee(_pollID, calculateCommitFee(_pollID), voter);
 
         emit _VoteCommitted(_pollID, voter);
     }
-   
+
 
     /**
     @notice Reveals vote with choice and secret salt used in generating commitHash to attribute committed tokens
@@ -133,17 +131,15 @@ contract Voting is IVoting {
 
     function revealVote(uint _pollID, uint _voteOption, uint _voteStake, uint _salt, address _voter) public {
         // make sure msg.sender has enough voting rights
-        
+
         // Make sure the reveal period is active
         require(revealPeriodActive(_pollID));
         require(pollMap[_pollID].didCommit[_voter]);                         // make sure user has committed a vote for this poll
         require(!pollMap[_pollID].didReveal[_voter]);                        // prevent user from revealing multiple times
         require(keccak256(abi.encodePacked(_voteOption, _voteStake, _salt)) == getCommitHash(_voter, _pollID)); // compare resultant hash from inputs to original commitHash
 
-        uint fee = calculateRevealFee(_pollID, _voteStake);
-        payFee(_pollID, fee, _voter);
         requestVotingRights(_pollID, _voteStake, _voter);
-        
+
         //  uint numTokens = getNumTokens(msg.sender, _pollID);
         bytes32 UUID = attrUUID(_voter, _pollID);
 
@@ -165,60 +161,27 @@ contract Voting is IVoting {
         return (pollMap[_pollId].votesFor, pollMap[_pollId].votesAgainst);
     }
 
-    function getVoteOption(uint _pollId, address voter) public view returns (uint) {
-        return pollMap[_pollId].voteOptions[voter];
-    }
     function enoughStake(uint _pollID, address _voter, uint _numTokens) public returns (bool) {
         return pollMap[_pollID].withdrawedStakes[_voter] + _numTokens <= pollMap[_pollID].lockedStakes[_voter];
-
     }
 
-
-    function withdrawStake(uint _pollID, address _voter, uint _numTokens) public returns (uint _bonusPrize) {
-        require(pollEnded(_pollID));
-        require(enoughStake(_pollID, _voter, _numTokens), "not enough token to withdraw");
-        address voter = _voter;
-        Poll poll = pollMap[_pollID];
-
-        uint vote = poll.voteOptions[voter] == 1? 1: 0; 
-        uint votingResult = result(_pollID);
-        uint returnedBonusPrize = 0;
-        if(! poll.prizePayed[voter]) {
-            (uint prize, uint bonusPrize, bool isWinner) = getWinnerPrize(_pollID, voter);
-            
-            if (isWinner) {
-                require(token.transfer(voter,  prize));
-            } 
-            returnedBonusPrize = bonusPrize;
-            poll.prizePayed[voter] = true;
-       } 
-      
-        poll.withdrawedStakes[voter] += _numTokens;
-        require(token.transfer(voter, _numTokens));
-        emit _StakeWithdrawed(_pollID, _voter, _numTokens);
-        return returnedBonusPrize;
-
-    }
-
-
- 
-    function getWinnerPrize(uint _pollId, address voter) public returns (uint prize, uint bonusPrize, bool isWinner ) {
+    function getOverallStake(uint _pollId) public returns (uint) {
         Poll poll = pollMap[_pollId];
 
-        uint vote = poll.voteOptions[voter] == 1? 1: 0; 
-        uint votingResult = result(_pollId);
-
-        if (vote == votingResult) {
-            // winner
-            uint overallStakes = poll.votesFor + poll.votesAgainst;
-            uint winnerPrize = poll.prize.mul(poll.lockedStakes[voter]).div(overallStakes);
-            uint rBonusPrize = poll.bonus.mul(poll.lockedStakes[voter]).div(overallStakes);
-            return (winnerPrize, rBonusPrize, true);
-        } else {
-            return (0, 0, false);
-        }
+        return poll.votesFor + poll.votesAgainst;
     }
 
+    function isWinner(uint _pollId, address voter) public returns (bool) {
+        Poll poll = pollMap[_pollId];
+        uint vote = poll.voteOptions[voter] == 1? 1: 0;
+
+        if (vote == result(_pollId)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
 
     // ==================
     // POLLING INTERFACE:
@@ -229,10 +192,8 @@ contract Voting is IVoting {
     @param _commitDuration Length of desired commit period in seconds
     @param _revealDuration Length of desired reveal period in seconds
     */
-    function startPoll(uint _itemId, uint _commitDuration, uint _revealDuration, uint _voteFee, uint _revealFeeRate, uint _bonus) public returns (uint pollID) {
-        require(_revealFeeRate > 0);
+    function startPoll(uint _itemId, uint _commitDuration, uint _revealDuration) public returns (uint pollID) {
         pollNonce = pollNonce + 1;
-
 
         uint commitEndDate = block.timestamp.add(_commitDuration);
         uint revealEndDate = commitEndDate.add(_revealDuration);
@@ -242,11 +203,7 @@ contract Voting is IVoting {
             commitEndDate: commitEndDate,
             revealEndDate: revealEndDate,
             votesFor: 0,
-            votesAgainst: 0,
-            voteFee: _voteFee,
-            revealRateFee: _revealFeeRate,
-            prize: 0,
-            bonus: _bonus
+            votesAgainst: 0
         });
 
         emit _PollCreated(_itemId, commitEndDate, revealEndDate, pollNonce, msg.sender);
@@ -264,7 +221,7 @@ contract Voting is IVoting {
         Poll memory poll = pollMap[_pollID];
         if (poll.votesFor > poll.votesAgainst) {
             return 1;
-        } 
+        }
         if (poll.votesFor <= poll.votesAgainst) {
             return 0;
         }
@@ -343,16 +300,6 @@ contract Voting is IVoting {
         return (_pollID != 0 && _pollID <= pollNonce);
     }
 
-    function calculateCommitFee(uint _pollID) view public returns (uint fee) {
-        require(pollExists(_pollID));
-        return pollMap[_pollID].voteFee;
-    }
-
-    function calculateRevealFee(uint _pollID, uint _stake) view public returns (uint fee) {
-        require(pollExists(_pollID));
-        return _stake.mul(pollMap[_pollID].revealRateFee).div(PRECISION);
-    }
-
     // ---------------------------
     // DOUBLE-LINKED-LIST HELPERS:
     // ---------------------------
@@ -377,9 +324,9 @@ contract Voting is IVoting {
         return store.getAttribute(attrUUID(_voter, _pollID), "numTokens");
     }
 
- 
 
-   
+
+
 
     // ----------------
     // GENERAL HELPERS:
@@ -403,18 +350,5 @@ contract Voting is IVoting {
         return keccak256(abi.encodePacked(_user, _pollID));
     }
 
-    
-
-    // ===============
-    // PRIVATE METHODS:
-    // ===============
-    /**
-     */
-    function payFee(uint _pollID, uint _fee, address voter) private {
-        require(pollExists(_pollID));
-        require(token.balanceOf(voter) >= _fee);
-        require(token.transferFrom(voter, this, _fee));
-        pollMap[_pollID].prize += _fee;
-    }
 
 }

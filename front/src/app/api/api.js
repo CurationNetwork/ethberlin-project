@@ -1,7 +1,7 @@
 import { readContract } from '../../helpers/eth';
 import { requestsConfig } from '../../../config/config';
 
-const address = '0xa79e596b452c89d0be35675d9f8ecf39a0a6e2fd';
+import { address } from '../../constants/constants.js';
 
 export const getItemIds = () => {
   return !requestsConfig.USE_MOCK
@@ -206,5 +206,29 @@ export const voteReveal = (itemId, direction, stake) => {
     ? readContract(address, 'voteReveal', [itemId, direction, stake, 0])
     : new Promise((resolve, reject) => {
       resolve(true)
+    })
+}
+
+export const voteFinish = (itemId) => {
+  return !requestsConfig.USE_MOCK
+    ? readContract(address, 'finishVoting', [itemId])
+    : new Promise((resolve, reject) => {
+      resolve(true)
+    })
+}
+
+export const getCurrentRank = (itemId) => {
+  return !requestsConfig.USE_MOCK
+    ? readContract(address, 'getCurrentRank', [itemId])
+    : new Promise((resolve, reject) => {
+      resolve(true)
+    })
+}
+
+export const getBalance = (target) => {
+  return !requestsConfig.USE_MOCK
+    ? readContract(address, 'balanceOf', [target])
+    : new Promise((resolve, reject) => {
+      resolve(100)
     })
 }

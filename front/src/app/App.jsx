@@ -10,25 +10,38 @@ import ModalVote from './modal-vote/ModalVote';
 import ModalAddItem from './modal-add-item/ModalAddItem';
 import * as api from './api/api';
 import { prepareFromArr } from '../helpers/utils';
-import { getBalance, currentAccount } from '../helpers/eth';
+import { currentAccount } from '../helpers/eth';
+import { address, votingAddress, tokenAddress } from '../constants/constants.js';
 import "./App.less";
 
 @observer
 class App extends Component {
+  constructor(props) {
+    super(props);
+
+    this.approve = this.approve.bind(this);
+  }
+
   componentDidMount() {
     AppStore.putItems();
 
     setInterval(() => {
-        currentAccount().then(acc => {
-            AppStore.setAccount(acc);
-        });
+      currentAccount().then(acc => {
+        AppStore.setAccount(acc);
 
-        getBalance().then(balance => {
-          AppStore.setBalance(balance);
+        api.getBalance(acc).then(balance => {
+          AppStore.setBalance(balance.toString());
         })
+      });
     }, 1000);
   }
 
+  approve() {
+    api.approve(address)
+      .then(() => api.approve(votingAddress))
+      .then(() => alert('approve OK'))
+      .catch(e => console.log(e));
+  }
 
   render() {
     const items = AppStore.items;

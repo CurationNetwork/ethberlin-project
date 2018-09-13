@@ -36,11 +36,54 @@ export class AppStore {
             api.getItem(id)
               .then((item) => {
                 item = { ...prepareFromArr(item, 'item'), id };
-                if (item.votingId !== '0') {
-                  api.getVoting(item.votingId)
-                    .then((vote) => {
-                      vote = prepareFromArr(vote, 'voting');
 
+                api.getCurrentRank(item.id)
+                  .then(rank => {
+                    item.rank = rank.toString();
+
+                    if (item.votingId !== '0') {
+                      api.getVoting(item.votingId)
+                        .then((vote) => {
+                          vote = prepareFromArr(vote, 'voting');
+
+                          const ids = [];
+                          const promises = [];
+
+                          item.movingsIds.forEach(movId => {
+                            ids.push(movId);
+                            promises.push(api.getMoving(movId));
+                          });
+
+                          Promise.all(promises)
+                            .then((moving) => {
+                              moving = moving.map((mov) => prepareFromArr(mov, 'mov'))
+                              const itemObject = { ...item, id, vote, moving };
+
+                              if (!this.items) {
+                                this.items = [];
+                              }
+
+                              const index = this.items.findIndex((item) => item.id === id);
+
+                              if (index !== -1) {
+                                this.items[index] = { ...this.items[index], ...itemObject }
+                              } else {
+                                if (itemObject.length === 0) {
+                                  this.items = [];
+                                } else {
+                                  this.items.push(itemObject)
+                                }
+                              }
+                              // AppStore.putItems({ ...item, id, vote, moving });
+                            })
+                            .catch((error) => {
+                              console.error(error);
+                            });
+                        })
+                        .catch((error) => {
+                          console.error(error);
+                        });
+                    } else {
                       const ids = [];
                       const promises = [];
 
@@ -52,7 +95,8 @@ export class AppStore {
                       Promise.all(promises)
                         .then((moving) => {
                           moving = moving.map((mov) => prepareFromArr(mov, 'mov'))
-                          const itemObject = { ...item, id, vote, moving };
+
+                          const itemObject = { ...item, id, moving };
 
                           if (!this.items) {
                             this.items = [];
@@ -69,50 +113,12 @@ export class AppStore {
                               this.items.push(itemObject)
                             }
                           }
-                          // AppStore.putItems({ ...item, id, vote, moving });
                         })
                         .catch((error) => {
                           console.error(error);
                         });
-                    })
-                    .catch((error) => {
-                      console.error(error);
-                    });
-                } else {
-                  const ids = [];
-                  const promises = [];
-
-                  item.movingsIds.forEach(movId => {
-                    ids.push(movId);
-                    promises.push(api.getMoving(movId));
-                  });
-
-                  Promise.all(promises)
-                    .then((moving) => {
-                      moving = moving.map((mov) => prepareFromArr(mov, 'mov'))
-
-                      const itemObject = { ...item, id, moving };
-
-                      if (!this.items) {
-                        this.items = [];
-                      }
-
-                      const index = this.items.findIndex((item) => item.id === id);
-
-                      if (index !== -1) {
-                        this.items[index] = { ...this.items[index], ...itemObject }
-                      } else {
-                        if (itemObject.length === 0) {
-                          this.items = [];
-                        } else {
-                          this.items.push(itemObject)
-                        }
-                      }
-                    })
-                    .catch((error) => {
-                      console.error(error);
-                    });
-                }
+                    }
+                 });
               })
               .catch((error) => {
                 console.error(error);

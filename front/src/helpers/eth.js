@@ -1,10 +1,8 @@
 import abi from '../constants/Ranking.js';
-import tokenAbi from '../constants/Token.js';
+
+import { address } from '../constants/constants.js';
 
 export let web3 = window.Web3 ? new window.Web3(window.web3.currentProvider) : undefined;
-
-const address = '0xa79e596b452c89d0be35675d9f8ecf39a0a6e2fd';
-const tokenAddress = '0xc4d079752947dffb8b38e76e4a3014497b6d476b';
 
 
 export const sendTransaction = (contractAddress) => {
@@ -91,23 +89,3 @@ export const currentAccount = () => {
   });
 }
 
-export const getBalance = () => {
-  const token = web3.eth.contract(tokenAbi.abi).at(tokenAddress);
-
-  return new Promise((resolve, reject) => {
-    try {
-      currentAccount().then(account => {
-        token['balanceOf']([account], (error, result) => {
-          if (error) {
-            console.error(error);
-            reject(error);
-          } else {
-            resolve(result.div("1000000000000000000").toString());
-          }
-        });
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
-}

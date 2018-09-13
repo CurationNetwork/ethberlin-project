@@ -1,5 +1,6 @@
 import React, { PureComponent } from 'react';
 import Input from '../common/input/Input';
+import { toJS } from 'mobx';
 import './ModalVote.less';
 import classNames from 'classnames';
 import { waitTransaction } from '../../helpers/eth';
@@ -26,6 +27,7 @@ export default class ModalVote extends PureComponent {
     this.selectDirection = this.selectDirection.bind(this);
     this.sendTrans = this.sendTrans.bind(this);
     this.voteReveal = this.voteReveal.bind(this);
+    this.voteFinish = this.voteFinish.bind(this);
   }
 
   changeStake(str) {
@@ -97,6 +99,29 @@ export default class ModalVote extends PureComponent {
       });
   }
 
+  voteFinish() {
+    const { item } = this.props;
+
+    console.log(item)
+
+    api.voteFinish(item.id)
+      .then((result) => {
+        this.setState({ isLoader: true });
+
+        waitTransaction(result)
+          .then((result) => {
+            AppStore.closeModalVote();
+            AppStore.putItems();
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
   voteReveal() {
     const { item } = this.props;
 
@@ -137,7 +162,7 @@ export default class ModalVote extends PureComponent {
     let btn;
     const isVoting = item.votingId !== '0';
 
-    if (!isVoting) {
+    if (!isVoting || getStage(item.vote.startTime, item.vote.commitTtl, item.vote.revealTtl) === 'commit') {
       content = (
         <div>
           <div className="input-wrapper">
@@ -201,7 +226,12 @@ export default class ModalVote extends PureComponent {
       btn = (
         <button className="submit btn" onClick={this.voteReveal}>Reveal</button>
       );
-    } else if (getStage(item.vote.startTime, item.vote.commitTtl, item.vote.revealTtl) === 'commit') {
+    } else {
+       btn = (
+        <button className="submit btn" onClick={this.voteFinish}>Finish</button>
+      );
+    }
+    /*else if (getStage(item.vote.startTime, item.vote.commitTtl, item.vote.revealTtl) === 'none') {
       content = (
         <div>
           <p>You commited already!</p>
@@ -214,6 +244,7 @@ export default class ModalVote extends PureComponent {
         </div>
       );
     }
+*/
 
     return (
       <div className="modal-vote">

@@ -1,10 +1,14 @@
 pragma solidity ^0.4.23;
 
-import 'tokens/eip20/EIP20Interface.sol';
+import 'zeppelin-solidity/contracts/token/ERC20/StandardToken.sol';
+import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import './IVoting.sol';
 
 
-contract Ranking {
+contract Ranking is StandardToken {
+
+    using SafeMath for uint;
+
     event VotingStarted(
         uint itemId,
         uint votingId,
@@ -66,7 +70,7 @@ contract Ranking {
         uint commitTtl;
         uint revealTtl;
         uint startTime;
-        uint commissions;
+        uint totalPrize;
         uint pollId;
 
         address[] votersAddresses;
@@ -103,14 +107,12 @@ contract Ranking {
     mapping (uint => Moving) Movings;
 
 
-    uint stakesCounter;
+    uint stakesCounter = 1;
     uint maxRank;
-    uint deployTime;
     uint votingCount;
     uint avgStake;
 
     IVoting votingContract;
-    EIP20Interface token;
 
 
     /* constants */
@@ -125,10 +127,19 @@ contract Ranking {
     uint currentCommitTtl;
     uint currentRevealTtl;
 
+    string public constant name = "CurationToken";
+    string public constant symbol = "CRN";
+    uint8 public constant decimals = 18;
 
-    constructor() public {}
+    uint256 public constant INITIAL_SUPPLY = 10000 * (10 ** uint256(decimals));
 
-    function init(address votingContractAddress, address tokenAddress,
+    constructor() public {
+        totalSupply_ = INITIAL_SUPPLY;
+        balances[msg.sender] = INITIAL_SUPPLY;
+        emit Transfer(address(0), msg.sender, INITIAL_SUPPLY);
+    }
+
+    function init(address votingContractAddress,
                 uint currentDynamicFeeRate_, uint dynamicFeePrecision_, uint fixedFeeMax_,
                 uint tMin_, uint unstakeSpeed0_, uint unstakeSpeedCoef_,
                 uint currentCommitTtl_, uint currentRevealTtl_, uint avgStake_
@@ -136,8 +147,6 @@ contract Ranking {
         public
     {
         votingContract = IVoting(votingContractAddress);
-        token = EIP20Interface(tokenAddress);
-        deployTime = now;
 
         currentDynamicFeeRate = currentDynamicFeeRate_;
         dynamicFeePrecision = dynamicFeePrecision_;
@@ -172,6 +181,10 @@ contract Ranking {
         _;
     }
 
+    modifier onlyFinishedVoting(uint votingId) {
+        require(getVotingState(votingId) == VotingState.Finished);
+        _;
+    }
 
     /* VIEW FUNCTIONS */
     function getItemState(uint itemId)
@@ -211,7 +224,7 @@ contract Ranking {
         returns (uint)
     {
         uint dRank = 1;
-        uint totalRank = getTotalRank(itemId);
+        uint totalRank = getCurrentRank(itemId);
 
         if (totalRank < maxRank)
             dRank = maxRank - totalRank;
@@ -227,7 +240,7 @@ contract Ranking {
         return stake * currentDynamicFeeRate / dynamicFeePrecision;
     }
 
-    function getTotalRank(uint itemId)
+    function getCurrentRank(uint itemId)
         public
         view
         onlyExistItem(itemId)
@@ -310,7 +323,7 @@ contract Ranking {
             uint commitTtl,
             uint revealTtl,
             uint startTime,
-            uint commissions,
+            uint totalPrize,
             address[] votersAddresses
         )
     {
@@ -322,7 +335,7 @@ contract Ranking {
             voting.commitTtl,
             voting.revealTtl,
             voting.startTime,
-            voting.commissions,
+            voting.totalPrize,
             voting.votersAddresses
         );
     }
@@ -399,7 +412,7 @@ contract Ranking {
         require(getItemState(itemId) == ItemState.None);
 
         Items[itemId].balance += numTokens;
-        require(token.transferFrom(msg.sender, this, numTokens));
+        require(pay(msg.sender, numTokens));
     }
 
 
@@ -414,23 +427,16 @@ contract Ranking {
             item.votingId = newVoting(itemId);
 
             emit VotingStarted(itemId, item.votingId, now);
-
-            Votings[item.votingId].pollId = votingContract.startPoll(
-                itemId,
-                Votings[item.votingId].commitTtl,
-                Votings[item.votingId].revealTtl,
-                Votings[item.votingId].fixedFee,
-                Votings[item.votingId].dynamicFeeRate,
-                item.balance
-            );
         }
 
         require(getVotingState(item.votingId) == VotingState.Commiting);
-
         Voting storage voting = Votings[item.votingId];
-        voting.votersAddresses.push(msg.sender);
 
-        voting.commissions += getFixedCommission(itemId);
+        uint fee = getFixedCommission(itemId);
+        require(pay(msg.sender, fee));
+        voting.totalPrize.add(fee);
+
+        voting.votersAddresses.push(msg.sender);
 
         votingContract.commitVote(voting.pollId, commitment, msg.sender);
 
@@ -446,9 +452,12 @@ contract Ranking {
         require(getVotingState(item.votingId) == VotingState.Revealing);
 
         Voting storage voting = Votings[item.votingId];
-        voting.commissions += getDynamicCommission(stake);
 
-       VoterInfo storage voterInfo = voting.voters[msg.sender];
+        uint fee = getDynamicCommission(itemId);
+        require(pay(msg.sender, fee.add(stake)));
+        voting.totalPrize += fee;
+
+        VoterInfo storage voterInfo = voting.voters[msg.sender];
         voterInfo.stake = stake;
         voterInfo.direction = direction;
 
@@ -467,7 +476,11 @@ contract Ranking {
         require(getItemState(itemId) == ItemState.Voting);
         require(getVotingState(Items[itemId].votingId) == VotingState.Finished);
 
-        Voting storage voting = Votings[Items[itemId].votingId];
+        Item storage item = Items[itemId];
+
+        sendPrizesOrUnstake(item.votingId);
+
+        Voting storage voting = Votings[item.votingId];
 
         uint votesUp;
         uint votesDown;
@@ -476,59 +489,40 @@ contract Ranking {
         uint direction = votesUp > votesDown ? 1 : 0;
         uint distance = votesUp > votesDown ? votesUp - votesDown : votesDown - votesUp;
 
-        uint256 tmp;
+        uint movingId = newMoving(now, getUnstakeSpeed(), distance, direction, item.votingId);
+        item.movingsIds.push(movingId);
+        item.votingId = 0;
 
-        for (uint i = 0; i < voting.votersAddresses.length; i++) {
-            (voting.voters[voting.votersAddresses[i]].prize, tmp, voting.voters[voting.votersAddresses[i]].isWinner) =
-                votingContract.getWinnerPrize(voting.pollId, voting.votersAddresses[i]);
+        emit MovingStarted(itemId, item.votingId, movingId, now, distance, direction, getUnstakeSpeed());
 
-            voting.voters[voting.votersAddresses[i]].prize += tmp;
+//        removeOldMovings(itemId);
 
-            if (!voting.voters[voting.votersAddresses[i]].isWinner)
-                votingContract.withdrawStake(voting.pollId, voting.votersAddresses[i], voting.voters[voting.votersAddresses[i]].stake);
-            else
-                votingContract.withdrawStake(voting.pollId, voting.votersAddresses[i], 0);
-        }
-
-        tmp = newMoving(now, getUnstakeSpeed(), distance, direction, Items[itemId].votingId);
-        emit MovingStarted(itemId, Items[itemId].votingId, tmp, now, distance, direction, getUnstakeSpeed());
-
-        Items[itemId].movingsIds.push(tmp);
-        Items[itemId].votingId = 0;
-
-        removeOldMovings(itemId);
-
-        emit VotingFinished(itemId, Items[itemId].votingId);
+        emit VotingFinished(itemId, item.votingId);
     }
 
     function unstake(uint itemId)
         public
     {
-        Item storage item = Items[itemId];
+        for (uint i = 0; i < Items[itemId].movingsIds.length; ++i) {
+            Moving storage moving = Movings[Items[itemId].movingsIds[i]];
 
-        for (uint i = 0; i < item.movingsIds.length; ++i) {
-            Moving storage moving = Movings[item.movingsIds[i]];
+            if (Votings[moving.votingId].voters[msg.sender].stake != 0) {
+                VoterInfo storage voterInfo = Votings[moving.votingId].voters[msg.sender];
 
-            Voting storage voting = Votings[moving.votingId];
+                if (voterInfo.stake <= voterInfo.unstaked)
+                    continue;
 
-            if (voting.voters[msg.sender].stake != 0) {
-                VoterInfo storage voterInfo = voting.voters[msg.sender];
-                if (voterInfo.stake > voterInfo.unstaked) {
-                    if ((now - moving.startTime) * moving.speed >= moving.distance) {
-                        uint forTransfer = votingContract.withdrawStake(moving.votingId, msg.sender, voterInfo.stake - voterInfo.unstaked);
-                        require(token.transfer(msg.sender, forTransfer));
-                        item.balance -= forTransfer;
-                        voterInfo.unstaked = voterInfo.stake;
-                    }
-                    else {
-                        uint forUnstake = (voterInfo.stake / moving.distance) * moving.speed * (now - moving.startTime);
+                if ((now.sub(moving.startTime)).mul(moving.speed) >= moving.distance) {
+                    require(transfer(msg.sender, voterInfo.stake - voterInfo.unstaked));
+                    voterInfo.unstaked = voterInfo.stake;
+                }
+                else {
+                    uint movedDistance = now.sub(moving.startTime).mul(moving.speed);
+                    uint forUnstake = voterInfo.stake.mul(movedDistance).div(moving.distance);
 
-                        if (forUnstake > voterInfo.unstaked) {
-                            uint forTransfer2 = votingContract.withdrawStake(moving.votingId, msg.sender, forUnstake - voterInfo.unstaked);
-                            require(token.transfer(msg.sender, forTransfer2));
-                            item.balance -= forTransfer2;
-                            voterInfo.unstaked = forUnstake;
-                        }
+                    if (forUnstake > voterInfo.unstaked) {
+                        require(transfer(msg.sender, forUnstake));
+                        voterInfo.unstaked = forUnstake;
                     }
                 }
             }
@@ -543,6 +537,7 @@ contract Ranking {
     {
         uint votingId = VotingsLastId++;
         Voting storage voting = Votings[votingId];
+        Item storage item = Items[itemId];
 
         voting.startTime = now;
         voting.fixedFee = getFixedCommission(itemId);
@@ -550,6 +545,15 @@ contract Ranking {
         voting.commitTtl = currentCommitTtl;
         voting.revealTtl = currentRevealTtl;
         voting.dynamicFeeRate = currentDynamicFeeRate;
+
+        voting.totalPrize = item.balance;
+        item.balance = 0;
+
+        voting.pollId = votingContract.startPoll(
+            itemId,
+            voting.commitTtl,
+            voting.revealTtl
+        );
 
         votingCount++;
 
@@ -580,13 +584,13 @@ contract Ranking {
         for (uint i = 0; i < item.movingsIds.length; ++i) {
             Moving storage moving = Movings[item.movingsIds[i]];
 
-            if ((now - moving.startTime) * moving.speed >= moving.distance) {
-                withdrawForAllVoters(moving.votingId, itemId);
+            if (now.sub(moving.startTime).mul(moving.speed) >= moving.distance) {
+                unstakeForAllVoters(moving.votingId, itemId);
 
                 if (moving.direction != 0)
-                    item.lastRank += moving.distance;
+                    item.lastRank = item.lastRank.add(moving.distance);
                 else
-                    item.lastRank -= moving.distance;
+                    item.lastRank = item.lastRank.sub(moving.distance);
 
                 if (maxRank < item.lastRank)
                     maxRank = item.lastRank;
@@ -595,6 +599,7 @@ contract Ranking {
 
                 delete Votings[moving.votingId];
                 delete Movings[item.movingsIds[i]];
+
                 item.movingsIds[i] = item.movingsIds[item.movingsIds.length - 1];
                 item.movingsIds.length--;
                 i--;
@@ -602,7 +607,7 @@ contract Ranking {
         }
     }
 
-    function withdrawForAllVoters(uint votingId, uint itemId)
+    function unstakeForAllVoters(uint votingId, uint itemId)
         internal
     {
         Voting storage voting = Votings[votingId];
@@ -612,11 +617,49 @@ contract Ranking {
             VoterInfo storage voter = voting.voters[voting.votersAddresses[i]];
 
             if (voter.stake > voter.unstaked) {
-                uint forTransfer = votingContract.withdrawStake(votingId, voting.votersAddresses[i], voter.stake - voter.unstaked); 
-                require(token.transfer(voting.votersAddresses[i], forTransfer));
-                item.balance -= forTransfer;
+                require(transfer(voting.votersAddresses[i], voter.stake.sub(voter.unstaked)));
                 voter.unstaked = voter.stake;
             }
         }
+    }
+
+    function calculatePrize(uint overallPrize, uint overallStake, uint voterStake)
+        internal
+        returns (uint)
+    {
+        return overallPrize.mul(voterStake).div(overallStake);
+    }
+
+    function sendPrizesOrUnstake(uint votingId)
+        internal
+        onlyExistVoting(votingId)
+        onlyFinishedVoting(votingId)
+    {
+        Voting storage voting = Votings[votingId];
+
+        for (uint i = 0; i < voting.votersAddresses.length; ++i) {
+            if (votingContract.isWinner(voting.pollId, voting.votersAddresses[i])) {
+                uint prize = calculatePrize(voting.totalPrize,
+                                            votingContract.getOverallStake(voting.pollId),
+                                            voting.voters[voting.votersAddresses[i]].stake);
+
+                require(transfer(voting.votersAddresses[i], prize));
+            }
+            else {
+                if (voting.voters[voting.votersAddresses[i]].stake > 0) {
+                    require(transfer(voting.votersAddresses[i], voting.voters[voting.votersAddresses[i]].stake));
+                }
+            }
+        }
+    }
+
+    function pay(address _from, uint256 _value) public returns (bool) {
+        require(_from != address(0));
+
+        // SafeMath.sub will throw if there is not enough balance.
+        balances[_from] = balances[_from].sub(_value);
+        balances[this] = balances[this].add(_value);
+        Transfer(_from, this, _value);
+        return true;
     }
 }

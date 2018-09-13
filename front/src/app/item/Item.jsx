@@ -37,7 +37,7 @@ export default class Item extends PureComponent {
             <p className="desctiption">{item.description}</p>
             <p className={classNames(
               'weight', { up: speed > 0 }, { down: speed < 0 }
-            )}>Rank: <b>{item.lastRank}</b></p>
+            )}>Rank: <b>{item.rank}</b></p>
           </div>
 
           <div className="info flex-v">
