@@ -65,7 +65,6 @@ contract Ranking is StandardToken {
 
     struct Voting {
         uint fixedFee;
-        uint dynamicFeeRate;
         uint unstakeSpeed;
         uint commitTtl;
         uint revealTtl;
@@ -116,9 +115,12 @@ contract Ranking is StandardToken {
 
 
     /* constants */
-    uint currentDynamicFeeRate;
-    uint dynamicFeePrecision;
-    uint fixedFeeMax;
+    uint dynamicFeeLinearRate;
+    uint dynamicFeeLinearPrecision;
+    uint maxOverStakeFactor;
+
+    uint maxFixedFeeRate;
+    uint maxFixedFeePrecision;
 
     uint tMin;
     uint unstakeSpeed0;
@@ -129,7 +131,7 @@ contract Ranking is StandardToken {
 
     string public constant name = "CurationToken";
     string public constant symbol = "CRN";
-    uint8 public constant decimals = 18;
+    uint8 public constant decimals = 0;
 
     uint256 public constant INITIAL_SUPPLY = 10000 * (10 ** uint256(decimals));
 
@@ -140,23 +142,31 @@ contract Ranking is StandardToken {
     }
 
     function init(address votingContractAddress,
-                uint currentDynamicFeeRate_, uint dynamicFeePrecision_, uint fixedFeeMax_,
+                uint dynamicFeeLinearRate_, uint dynamicFeeLinearPrecision_, uint maxOverStakeFactor_,
+                uint maxFixedFeeRate_, uint maxFixedFeePrecision_,
                 uint tMin_, uint unstakeSpeed0_, uint unstakeSpeedCoef_,
-                uint currentCommitTtl_, uint currentRevealTtl_, uint avgStake_
+                uint currentCommitTtl_, uint currentRevealTtl_, uint initialAvgStake_
     )
         public
     {
         votingContract = IVoting(votingContractAddress);
 
-        currentDynamicFeeRate = currentDynamicFeeRate_;
-        dynamicFeePrecision = dynamicFeePrecision_;
-        fixedFeeMax = fixedFeeMax_;
+        dynamicFeeLinearRate = dynamicFeeLinearRate_;
+        dynamicFeeLinearPrecision = dynamicFeeLinearPrecision_;
+        maxOverStakeFactor = maxOverStakeFactor_;
+
+        maxFixedFeeRate = maxFixedFeeRate_;
+        maxFixedFeePrecision = maxFixedFeePrecision_;
+
         tMin = tMin_;
+
         unstakeSpeed0 = unstakeSpeed0_;
         unstakeSpeedCoef = unstakeSpeedCoef_;
+
         currentCommitTtl = currentCommitTtl_;
         currentRevealTtl = currentRevealTtl_;
-        avgStake = avgStake_;
+
+        avgStake = initialAvgStake_;
     }
 
 
@@ -187,6 +197,24 @@ contract Ranking is StandardToken {
     }
 
     /* VIEW FUNCTIONS */
+    function sqrt(uint x)
+        public
+        pure
+        returns (uint y)
+    {
+        if (x == 0)
+            return 0;
+        else if (x <= 3)
+            return 1;
+
+        uint z = (x + 1) / 2;
+        y = x;
+        while (z < y) {
+            y = z;
+            z = (x / z + z) / 2;
+        }
+    }
+
     function getItemState(uint itemId)
         public
         view
@@ -223,13 +251,15 @@ contract Ranking is StandardToken {
         onlyExistItem(itemId)
         returns (uint)
     {
-        uint dRank = 1;
-        uint totalRank = getCurrentRank(itemId);
+        uint maxFee = avgStake.mul(maxFixedFeeRate).div(maxFixedFeePrecision);
+        uint itemRank = getCurrentRank(itemId);
 
-        if (totalRank < maxRank)
-            dRank = maxRank - totalRank;
+        if (itemRank >= maxRank)
+            return maxFee;
 
-        return fixedFeeMax / dRank;
+        uint dRank = maxRank.sub(itemRank);
+
+        return maxFee.sub(maxFee.mul(dRank).div(maxRank));
     }
 
     function getDynamicCommission(uint stake)
@@ -237,7 +267,23 @@ contract Ranking is StandardToken {
         view
         returns (uint)
     {
-        return stake * currentDynamicFeeRate / dynamicFeePrecision;
+        if (stake <= avgStake)
+            return stake.mul(dynamicFeeLinearRate).div(dynamicFeeLinearPrecision);
+
+        uint overStake = stake.sub(avgStake);
+        uint fee = avgStake.mul(dynamicFeeLinearRate).div(dynamicFeeLinearPrecision);
+
+        uint k = 1;
+        uint kPrecision = 1;
+        uint max = sqrt(totalSupply_.sub(avgStake));
+        uint x = maxOverStakeFactor.mul(avgStake);
+
+        if (max > x)
+            k = max.div(x);
+        else
+            kPrecision = x.div(max);
+
+        return fee.add(k.mul(overStake).div(kPrecision) ** 2);
     }
 
     function getCurrentRank(uint itemId)
@@ -253,17 +299,17 @@ contract Ranking is StandardToken {
         for (uint i = 0; i < item.movingsIds.length; ++i) {
             Moving storage moving = Movings[item.movingsIds[i]];
 
-            if ((now - moving.startTime) * moving.speed >= moving.distance) {
+            if (now.sub(moving.startTime).mul(moving.speed) >= moving.distance) {
                 if (moving.direction != 0)
-                    rank += moving.distance;
+                    rank = rank.add(moving.distance);
                 else
-                    rank -= moving.distance;
+                    rank = rank.add(moving.distance);
             }
             else {
                 if (moving.direction != 0)
-                    rank += (now - moving.startTime) * moving.speed;
+                    rank = rank.add(now.sub(moving.startTime).mul(moving.speed));
                 else
-                    rank -= (now - moving.startTime) * moving.speed;
+                    rank = rank.sub(now.sub(moving.startTime).mul(moving.speed));
             }
         }
 
@@ -275,7 +321,8 @@ contract Ranking is StandardToken {
         view
         returns (uint)
     {
-        return unstakeSpeed0 + tMin * votingCount * unstakeSpeedCoef / avgStake;
+        return 1;
+//        return unstakeSpeed0 + tMin * votingCount * unstakeSpeedCoef / avgStake;
     }
 
     function getItems()
@@ -318,7 +365,6 @@ contract Ranking is StandardToken {
         onlyExistVoting(votingId)
         returns (
             uint fixedFee,
-            uint dynamicFeeRate,
             uint unstakeSpeed,
             uint commitTtl,
             uint revealTtl,
@@ -330,7 +376,6 @@ contract Ranking is StandardToken {
         Voting storage voting = Votings[votingId];
         return (
             voting.fixedFee,
-            voting.dynamicFeeRate,
             voting.unstakeSpeed,
             voting.commitTtl,
             voting.revealTtl,
@@ -432,13 +477,14 @@ contract Ranking is StandardToken {
         require(getVotingState(item.votingId) == VotingState.Commiting);
         Voting storage voting = Votings[item.votingId];
 
-        uint fee = getFixedCommission(itemId);
-        require(pay(msg.sender, fee));
-        voting.totalPrize.add(fee);
+        require(pay(msg.sender, voting.fixedFee));
+        voting.totalPrize.add(voting.fixedFee);
 
         voting.votersAddresses.push(msg.sender);
 
         votingContract.commitVote(voting.pollId, commitment, msg.sender);
+
+        removeOldMovings(itemId);
 
         emit VoteCommit(itemId, item.votingId, msg.sender);
     }
@@ -489,13 +535,11 @@ contract Ranking is StandardToken {
         uint direction = votesUp > votesDown ? 1 : 0;
         uint distance = votesUp > votesDown ? votesUp - votesDown : votesDown - votesUp;
 
-        uint movingId = newMoving(now, getUnstakeSpeed(), distance, direction, item.votingId);
+        uint movingId = newMoving(now, voting.unstakeSpeed, distance, direction, item.votingId);
         item.movingsIds.push(movingId);
         item.votingId = 0;
 
-        emit MovingStarted(itemId, item.votingId, movingId, now, distance, direction, getUnstakeSpeed());
-
-//        removeOldMovings(itemId);
+        emit MovingStarted(itemId, item.votingId, movingId, now, distance, direction, voting.unstakeSpeed);
 
         emit VotingFinished(itemId, item.votingId);
     }
@@ -513,7 +557,7 @@ contract Ranking is StandardToken {
                     continue;
 
                 if ((now.sub(moving.startTime)).mul(moving.speed) >= moving.distance) {
-                    require(transfer(msg.sender, voterInfo.stake - voterInfo.unstaked));
+                    require(send(msg.sender, voterInfo.stake - voterInfo.unstaked));
                     voterInfo.unstaked = voterInfo.stake;
                 }
                 else {
@@ -521,7 +565,7 @@ contract Ranking is StandardToken {
                     uint forUnstake = voterInfo.stake.mul(movedDistance).div(moving.distance);
 
                     if (forUnstake > voterInfo.unstaked) {
-                        require(transfer(msg.sender, forUnstake));
+                        require(send(msg.sender, forUnstake));
                         voterInfo.unstaked = forUnstake;
                     }
                 }
@@ -544,10 +588,10 @@ contract Ranking is StandardToken {
         voting.unstakeSpeed = getUnstakeSpeed();
         voting.commitTtl = currentCommitTtl;
         voting.revealTtl = currentRevealTtl;
-        voting.dynamicFeeRate = currentDynamicFeeRate;
 
         voting.totalPrize = item.balance;
         item.balance = 0;
+
 
         voting.pollId = votingContract.startPoll(
             itemId,
@@ -617,7 +661,7 @@ contract Ranking is StandardToken {
             VoterInfo storage voter = voting.voters[voting.votersAddresses[i]];
 
             if (voter.stake > voter.unstaked) {
-                require(transfer(voting.votersAddresses[i], voter.stake.sub(voter.unstaked)));
+                require(send(voting.votersAddresses[i], voter.stake.sub(voter.unstaked)));
                 voter.unstaked = voter.stake;
             }
         }
@@ -643,14 +687,25 @@ contract Ranking is StandardToken {
                                             votingContract.getOverallStake(voting.pollId),
                                             voting.voters[voting.votersAddresses[i]].stake);
 
-                require(transfer(voting.votersAddresses[i], prize));
+                voting.voters[voting.votersAddresses[i]].isWinner = true;
+                require(send(voting.votersAddresses[i], prize));
             }
             else {
                 if (voting.voters[voting.votersAddresses[i]].stake > 0) {
-                    require(transfer(voting.votersAddresses[i], voting.voters[voting.votersAddresses[i]].stake));
+                    require(send(voting.votersAddresses[i], voting.voters[voting.votersAddresses[i]].stake));
                 }
             }
         }
+    }
+
+    function send(address _to, uint256 _value) public returns (bool) {
+        require(_to != address(0));
+
+        // SafeMath.sub will throw if there is not enough balance.
+        balances[this] = balances[this].sub(_value);
+        balances[_to] = balances[_to].add(_value);
+        Transfer(this, _to, _value);
+        return true;
     }
 
     function pay(address _from, uint256 _value) public returns (bool) {

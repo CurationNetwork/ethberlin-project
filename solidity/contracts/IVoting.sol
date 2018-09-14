@@ -13,7 +13,7 @@ contract IVoting {
 
     /**
     @dev Initiates a poll with canonical configured parameters at pollID emitted by PollCreated event
-    @param _itemId - item for voting 
+    @param _itemId - item for voting
     @param _commitDuration Length of desired commit period in seconds
     @param _revealDuration Length of desired reveal period in seconds
     */
@@ -25,8 +25,6 @@ contract IVoting {
     @param _secretHash Commit keccak256 hash of voter's choice and salt (tightly packed in this order)
     */
     function commitVote(uint _pollID, bytes32 _secretHash, address voter) public;
-
-
 
     /**
     @notice Reveals vote with choice and secret salt used in generating commitHash to attribute committed tokens
