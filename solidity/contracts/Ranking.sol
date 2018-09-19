@@ -687,20 +687,24 @@ contract Ranking is StandardToken {
         }
     }
 
-    function send(address _to, uint256 _value) public returns (bool) {
+    function send(address _to, uint256 _value)
+        internal
+        returns (bool)
+    {
         require(_to != address(0));
 
-        // SafeMath.sub will throw if there is not enough balance.
         balances[this] = balances[this].sub(_value);
         balances[_to] = balances[_to].add(_value);
         Transfer(this, _to, _value);
         return true;
     }
 
-    function pay(address _from, uint256 _value) public returns (bool) {
+    function pay(address _from, uint256 _value)
+        internal
+        returns (bool)
+    {
         require(_from != address(0));
 
-        // SafeMath.sub will throw if there is not enough balance.
         balances[_from] = balances[_from].sub(_value);
         balances[this] = balances[this].add(_value);
         Transfer(_from, this, _value);
