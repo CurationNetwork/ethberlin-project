@@ -37,7 +37,7 @@ contract Voting is IVoting {
         uint itemId;
         uint commitEndDate;     /// expiration date of commit period for poll
         uint revealEndDate;     /// expiration date of reveal period for poll
-        uint votesFor;		    /// tally of votes supporting proposal
+        uint votesFor;          /// tally of votes supporting proposal
         uint votesAgainst;      /// tally of votes countering proposal
         mapping(address => bool) didCommit;   /// indicates whether an address committed a vote for this poll
         mapping(address => bool) didReveal;   /// indicates whether an address revealed a vote for this poll
@@ -51,10 +51,8 @@ contract Voting is IVoting {
     // ============
 
     uint constant public INITIAL_POLL_NONCE = 0;
-    uint constant public PRECISION = 10000;
     uint public pollNonce;
 
-    mapping(address => uint) public voteTokenBalance; // maps user's address to voteToken balance
     AttributeStore.Data store;
 
     constructor() public  {}
@@ -66,35 +64,6 @@ contract Voting is IVoting {
     function init() public {
         pollNonce = INITIAL_POLL_NONCE;
     }
-
-    // ================
-    // TOKEN INTERFACE:
-    // ================
-
-    /**
-    @notice Loads _numTokens ERC20 tokens into the voting contract for one-to-one voting rights
-    @dev Assumes that msg.sender has approved voting contract to spend on their behalf
-    @param _numTokens The number of votingTokens desired in exchange for ERC20 tokens
-    */
-    function requestVotingRights(uint _pollId, uint _numTokens, address _voter) private {
-
-        pollMap[_pollId].lockedStakes[_voter] += _numTokens;
-        emit _VotingRightsGranted(_numTokens, _voter);
-    }
-
-    /**
-    @notice Withdraw _numTokens ERC20 tokens from the voting contract, revoking these voting rights
-    @param _numTokens The number of ERC20 tokens desired in exchange for voting rights
-    */
-    function withdrawVotingRights(uint _pollId, uint _numTokens) external {
-        uint availableTokens = pollMap[_pollId].lockedStakes[msg.sender];
-
-        require(availableTokens >= _numTokens, "not enought tokens to withdraw rights");
-        pollMap[_pollId].lockedStakes[msg.sender] -= _numTokens;
-        emit _VotingRightsWithdrawn(_numTokens, msg.sender);
-    }
-
-
 
     // =================
     // VOTING INTERFACE:
@@ -138,7 +107,7 @@ contract Voting is IVoting {
         require(!pollMap[_pollID].didReveal[_voter]);                        // prevent user from revealing multiple times
         require(keccak256(abi.encodePacked(_voteOption, _voteStake, _salt)) == getCommitHash(_voter, _pollID)); // compare resultant hash from inputs to original commitHash
 
-        requestVotingRights(_pollID, _voteStake, _voter);
+        pollMap[_pollID].lockedStakes[_voter] += _voteStake;
 
         //  uint numTokens = getNumTokens(msg.sender, _pollID);
         bytes32 UUID = attrUUID(_voter, _pollID);
@@ -157,31 +126,6 @@ contract Voting is IVoting {
         emit _VoteRevealed(_pollID, _voteStake, pollMap[_pollID].votesFor, pollMap[_pollID].votesAgainst, _voteOption, _voter, _salt);
     }
 
-    function getPollResult(uint _pollId) public view returns (uint votesFor, uint votesAgainst) {
-        return (pollMap[_pollId].votesFor, pollMap[_pollId].votesAgainst);
-    }
-
-    function enoughStake(uint _pollID, address _voter, uint _numTokens) public returns (bool) {
-        return pollMap[_pollID].withdrawedStakes[_voter] + _numTokens <= pollMap[_pollID].lockedStakes[_voter];
-    }
-
-    function getOverallStake(uint _pollId) public returns (uint) {
-        Poll poll = pollMap[_pollId];
-
-        return poll.votesFor + poll.votesAgainst;
-    }
-
-    function isWinner(uint _pollId, address voter) public returns (bool) {
-        Poll poll = pollMap[_pollId];
-        uint vote = poll.voteOptions[voter] == 1? 1: 0;
-
-        if (vote == result(_pollId)) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
 
     // ==================
     // POLLING INTERFACE:
@@ -226,6 +170,27 @@ contract Voting is IVoting {
             return 0;
         }
 
+    }
+
+    function getPollResult(uint _pollId) public view returns (uint votesFor, uint votesAgainst) {
+        return (pollMap[_pollId].votesFor, pollMap[_pollId].votesAgainst);
+    }
+
+    function getOverallStake(uint _pollId) public returns (uint) {
+        Poll storage poll = pollMap[_pollId];
+        return poll.votesFor + poll.votesAgainst;
+    }
+
+    function isWinner(uint _pollId, address voter) public returns (bool) {
+        Poll storage poll = pollMap[_pollId];
+        uint vote = poll.voteOptions[voter] == 1? 1: 0;
+
+        if (vote == result(_pollId)) {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
     // ----------------

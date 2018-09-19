@@ -23,7 +23,7 @@ module.exports = async function(deployer, network, accounts) {
         ranking = instance;
         console.log('Ranking:', ranking.address);
 
-        return Faucet.new(ranking.address, []);
+        return Faucet.new();
     }).then(function(instance) {
         faucet = instance;
         console.log('Faucet:', faucet.address);
@@ -35,6 +35,10 @@ module.exports = async function(deployer, network, accounts) {
         return ranking.init(voting.address, ...rankingParams);
     }).then(async function () {
         console.log('Ranking inited');
+
+        return faucet.init(ranking.address);
+    }).then(async function () {
+        console.log('Faucet inited');
 
         return ranking.transfer(faucet.address, totalSupply);
     }).then(async function () {

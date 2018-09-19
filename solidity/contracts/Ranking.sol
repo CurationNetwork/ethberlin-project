@@ -1,11 +1,12 @@
 pragma solidity ^0.4.23;
 
 import 'zeppelin-solidity/contracts/token/ERC20/StandardToken.sol';
+import 'zeppelin-solidity/contracts/ownership/Superuser.sol';
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import './IVoting.sol';
 
 
-contract Ranking is StandardToken {
+contract Ranking is StandardToken, Superuser {
 
     using SafeMath for uint;
 
@@ -45,7 +46,7 @@ contract Ranking is StandardToken {
     );
 
     event MovingRemoved(
-        uint itemId,
+        uint _itemId,
         uint votingId,
         uint movingId
     );
@@ -120,16 +121,16 @@ contract Ranking is StandardToken {
     uint maxFixedFeeRate;
     uint maxFixedFeePrecision;
 
-    uint unstakeSpeed;
+    uint initialUnstakeSpeed;
 
     uint currentCommitTtl;
     uint currentRevealTtl;
 
-    string public constant name = "CurationToken";
+    string public constant tokenName = "CurationToken";
     string public constant symbol = "CRN";
-    uint8 public constant decimals = 0;
+    uint8 public constant decimals = 18;
 
-    uint256 public constant INITIAL_SUPPLY = 10000 * (10 ** uint256(decimals));
+    uint256 public constant INITIAL_SUPPLY = 100000 * (10 ** uint256(decimals));
 
     constructor() public {
         totalSupply_ = INITIAL_SUPPLY;
@@ -139,10 +140,11 @@ contract Ranking is StandardToken {
 
     function init(address votingContractAddress,
                 uint dynamicFeeLinearRate_, uint dynamicFeeLinearPrecision_, uint maxOverStakeFactor_,
-                uint maxFixedFeeRate_, uint maxFixedFeePrecision_, uint unstakeSpeed_,
+                uint maxFixedFeeRate_, uint maxFixedFeePrecision_, uint initialUnstakeSpeed_,
                 uint currentCommitTtl_, uint currentRevealTtl_, uint initialAvgStake_
     )
         public
+        onlyOwner
     {
         votingContract = IVoting(votingContractAddress);
 
@@ -153,7 +155,7 @@ contract Ranking is StandardToken {
         maxFixedFeeRate = maxFixedFeeRate_;
         maxFixedFeePrecision = maxFixedFeePrecision_;
 
-        unstakeSpeed = unstakeSpeed_;
+        initialUnstakeSpeed = initialUnstakeSpeed_;
 
         currentCommitTtl = currentCommitTtl_;
         currentRevealTtl = currentRevealTtl_;
@@ -163,8 +165,8 @@ contract Ranking is StandardToken {
 
 
     /* MODIFIERS */
-    modifier onlyExistItem(uint itemId) {
-        require(Items[itemId].owner != address(0));
+    modifier onlyExistItem(uint _itemId) {
+        require(Items[_itemId].owner != address(0));
         _;
     }
 
@@ -178,8 +180,8 @@ contract Ranking is StandardToken {
         _;
     }
 
-    modifier onlyItemOwner(uint itemId) {
-        require(Items[itemId].owner == msg.sender);
+    modifier onlyItemOwner(uint _itemId) {
+        require(Items[_itemId].owner == msg.sender);
         _;
     }
 
@@ -188,7 +190,7 @@ contract Ranking is StandardToken {
         _;
     }
 
-    /* VIEW FUNCTIONS */
+    /* PURE FUNCTIONS */
     function sqrt(uint x)
         public
         pure
@@ -207,13 +209,31 @@ contract Ranking is StandardToken {
         }
     }
 
-    function getItemState(uint itemId)
+    function getCommitHash(uint _direction, uint _stake, uint _salt)
+        public
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(_direction, _stake, _salt));
+    }
+
+    function calculatePrize(uint _overallPrize, uint _overallStake, uint _voterStake)
+        public
+        pure
+        returns (uint)
+    {
+        return _overallPrize.mul(_voterStake).div(_overallStake);
+    }
+
+
+    /* VIEW FUNCTIONS */
+    function getItemState(uint _itemId)
         public
         view
-        onlyExistItem(itemId)
+        onlyExistItem(_itemId)
         returns (ItemState)
     {
-        Item storage item = Items[itemId];
+        Item storage item = Items[_itemId];
 
         if (item.votingId == 0)
             return ItemState.None;
@@ -221,13 +241,13 @@ contract Ranking is StandardToken {
             return ItemState.Voting;
     }
 
-    function getVotingState(uint votingId)
+    function getVotingState(uint _votingId)
         public
         view
-        onlyExistVoting(votingId)
+        onlyExistVoting(_votingId)
         returns (VotingState)
     {
-        Voting storage voting = Votings[votingId];
+        Voting storage voting = Votings[_votingId];
 
         if (voting.startTime + voting.commitTtl + voting.revealTtl < now)
             return VotingState.Finished;
@@ -237,14 +257,14 @@ contract Ranking is StandardToken {
         return VotingState.Commiting;
     }
 
-    function getFixedCommission(uint itemId)
+    function getFixedCommission(uint _itemId)
         public
         view
-        onlyExistItem(itemId)
+        onlyExistItem(_itemId)
         returns (uint)
     {
         uint maxFee = avgStake.mul(maxFixedFeeRate).div(maxFixedFeePrecision);
-        uint itemRank = getCurrentRank(itemId);
+        uint itemRank = getCurrentRank(_itemId);
 
         if (itemRank >= maxRank)
             return maxFee;
@@ -254,15 +274,15 @@ contract Ranking is StandardToken {
         return maxFee.sub(maxFee.mul(dRank).div(maxRank));
     }
 
-    function getDynamicCommission(uint stake)
+    function getDynamicCommission(uint _stake)
         public
         view
         returns (uint)
     {
-        if (stake <= avgStake)
-            return stake.mul(dynamicFeeLinearRate).div(dynamicFeeLinearPrecision);
+        if (_stake <= avgStake)
+            return _stake.mul(dynamicFeeLinearRate).div(dynamicFeeLinearPrecision);
 
-        uint overStake = stake.sub(avgStake);
+        uint overStake = _stake.sub(avgStake);
         uint fee = avgStake.mul(dynamicFeeLinearRate).div(dynamicFeeLinearPrecision);
 
         uint k = 1;
@@ -278,13 +298,13 @@ contract Ranking is StandardToken {
         return fee.add(k.mul(overStake).div(kPrecision) ** 2);
     }
 
-    function getCurrentRank(uint itemId)
+    function getCurrentRank(uint _itemId)
         public
         view
-        onlyExistItem(itemId)
+        onlyExistItem(_itemId)
         returns (uint)
     {
-        Item storage item = Items[itemId];
+        Item storage item = Items[_itemId];
 
         uint rank = item.lastRank;
 
@@ -313,7 +333,7 @@ contract Ranking is StandardToken {
         view
         returns (uint)
     {
-        return unstakeSpeed;  //TODO dynamic change
+        return initialUnstakeSpeed;  //TODO dynamic change
     }
 
     function getItems()
@@ -324,10 +344,10 @@ contract Ranking is StandardToken {
         return ItemsIds;
     }
 
-    function getItem(uint itemId)
+    function getItem(uint _itemId)
         public
         view
-        onlyExistItem(itemId)
+        onlyExistItem(_itemId)
         returns (
             string name,
             string description,
@@ -338,7 +358,7 @@ contract Ranking is StandardToken {
             uint[] movingsIds
         )
     {
-        Item storage item = Items[itemId];
+        Item storage item = Items[_itemId];
         return (
             item.name,
             item.description,
@@ -350,10 +370,10 @@ contract Ranking is StandardToken {
         );
     }
 
-    function getVoting(uint votingId)
+    function getVoting(uint _votingId)
         public
         view
-        onlyExistVoting(votingId)
+        onlyExistVoting(_votingId)
         returns (
             uint fixedFee,
             uint unstakeSpeed,
@@ -364,7 +384,7 @@ contract Ranking is StandardToken {
             address[] votersAddresses
         )
     {
-        Voting storage voting = Votings[votingId];
+        Voting storage voting = Votings[_votingId];
         return (
             voting.fixedFee,
             voting.unstakeSpeed,
@@ -376,10 +396,10 @@ contract Ranking is StandardToken {
         );
     }
 
-    function getVoterInfo(uint votingId, address voter)
+    function getVoterInfo(uint _votingId, address _voter)
         public
         view
-        onlyExistVoting(votingId)
+        onlyExistVoting(_votingId)
         returns (
             uint direction,
             uint stake,
@@ -388,7 +408,7 @@ contract Ranking is StandardToken {
             bool isWinner
         )
     {
-        VoterInfo storage info = Votings[votingId].voters[voter];
+        VoterInfo storage info = Votings[_votingId].voters[_voter];
         return (
             info.direction,
             info.stake,
@@ -398,10 +418,10 @@ contract Ranking is StandardToken {
         );
     }
 
-    function getMoving(uint movingId)
+    function getMoving(uint _movingId)
         public
         view
-        onlyExistMoving(movingId)
+        onlyExistMoving(_movingId)
         returns (
             uint startTime,
             uint speed,
@@ -410,7 +430,7 @@ contract Ranking is StandardToken {
             uint votingId
         )
     {
-        Moving storage moving = Movings[movingId];
+        Moving storage moving = Movings[_movingId];
         return (
             moving.startTime,
             moving.speed,
@@ -420,100 +440,116 @@ contract Ranking is StandardToken {
         );
     }
 
-    function getCommitHash(uint direction, uint stake, uint salt)
+
+    /* Only owner functions (only for testing period) */
+    function newItemWithRank(string _name, string _desc, uint _rank)
         public
-        view
-        returns (bytes32)
+        onlySuperuser
     {
-        return sha3(direction, stake, salt);
+        Item storage item = Items[ItemsLastId];
+        ItemsIds.push(ItemsLastId++);
+
+        item.name = _name;
+        item.description = _desc;
+        item.owner = msg.sender;
+        item.lastRank = _rank;
+    }
+
+    function setItemLastRank(uint _itemId, uint _rank)
+        public
+        onlySuperuser
+        onlyExistItem(_itemId)
+    {
+        Item storage item = Items[_itemId];
+        item.lastRank = _rank;
     }
 
 
     /* LISTING FUNCTIONS */
-    function newItem(string name, string desc)
+    function newItem(string _name, string _desc)
         public
     {
         Item storage item = Items[ItemsLastId];
         ItemsIds.push(ItemsLastId++);
 
-        item.name = name;
-        item.description = desc;
+        item.name = _name;
+        item.description = _desc;
         item.owner = msg.sender;
     }
 
-    function chargeBalance(uint itemId, uint numTokens)
+    function chargeBalance(uint _itemId, uint _numTokens)
         public
-        onlyItemOwner(itemId)
+        onlyItemOwner(_itemId)
     {
-        require(getItemState(itemId) == ItemState.None);
+        require(getItemState(_itemId) == ItemState.None);
 
-        Items[itemId].balance += numTokens;
-        require(pay(msg.sender, numTokens));
+        Items[_itemId].balance += _numTokens;
+        require(pay(msg.sender, _numTokens));
     }
 
 
     /* VOTING FUNCTIONS */
-    function voteCommit(uint itemId, bytes32 commitment)
+    function voteCommit(uint _itemId, bytes32 _commitment)
         public
-        onlyExistItem(itemId)
+        onlyExistItem(_itemId)
     {
-        Item storage item = Items[itemId];
+        Item storage item = Items[_itemId];
 
         if (item.votingId == 0) {
-            item.votingId = newVoting(itemId);
+            item.votingId = newVoting(_itemId);
 
-            emit VotingStarted(itemId, item.votingId, now);
+            emit VotingStarted(_itemId, item.votingId, now);
         }
 
         require(getVotingState(item.votingId) == VotingState.Commiting);
         Voting storage voting = Votings[item.votingId];
 
         require(pay(msg.sender, voting.fixedFee));
-        voting.totalPrize.add(voting.fixedFee);
+        voting.totalPrize = voting.totalPrize.add(voting.fixedFee);
 
         voting.votersAddresses.push(msg.sender);
 
-        votingContract.commitVote(voting.pollId, commitment, msg.sender);
+        votingContract.commitVote(voting.pollId, _commitment, msg.sender);
 
-        removeOldMovings(itemId);
+        removeOldMovings(_itemId);
 
-        emit VoteCommit(itemId, item.votingId, msg.sender);
+        emit VoteCommit(_itemId, item.votingId, msg.sender);
     }
 
-    function voteReveal(uint itemId, uint8 direction, uint stake, uint salt)
+    function voteReveal(uint _itemId, uint8 _direction, uint _stake, uint _salt)
         public
-        onlyExistItem(itemId)
+        onlyExistItem(_itemId)
     {
-        Item storage item = Items[itemId];
-        require(getItemState(itemId) == ItemState.Voting);
+        Item storage item = Items[_itemId];
+        require(getItemState(_itemId) == ItemState.Voting);
         require(getVotingState(item.votingId) == VotingState.Revealing);
 
         Voting storage voting = Votings[item.votingId];
 
-        uint fee = getDynamicCommission(itemId);
-        require(pay(msg.sender, fee.add(stake)));
-        voting.totalPrize += fee;
+        uint fee = getDynamicCommission(_itemId);
+        require(pay(msg.sender, fee.add(_stake)));
+        voting.totalPrize = voting.totalPrize.add(fee);
 
         VoterInfo storage voterInfo = voting.voters[msg.sender];
-        voterInfo.stake = stake;
-        voterInfo.direction = direction;
+        voterInfo.stake = _stake;
+        voterInfo.direction = _direction;
 
-        votingContract.revealVote(voting.pollId, direction, stake, salt, msg.sender);
+        votingContract.revealVote(voting.pollId, _direction, _stake, _salt, msg.sender);
 
         stakesCounter++;
-        avgStake = avgStake.add(stake - 1).div(stakesCounter);
+        avgStake = avgStake.add(_stake - 1).div(stakesCounter);
 
-        emit VoteReveal(itemId, item.votingId, msg.sender, direction, stake);
+        emit VoteReveal(_itemId, item.votingId, msg.sender, _direction, _stake);
     }
 
-    function finishVoting(uint itemId)
+    function finishVoting(uint _itemId)
         public
-        onlyExistItem(itemId)
+        onlyExistItem(_itemId)
     {
-        require(getItemState(itemId) == ItemState.Voting);
-        require(getVotingState(Items[itemId].votingId) == VotingState.Finished);
+        require(getItemState(_itemId) == ItemState.Voting);
+        require(getVotingState(Items[_itemId].votingId) == VotingState.Finished);
 
-        Item storage item = Items[itemId];
+        Item storage item = Items[_itemId];
 
         sendPrizesOrUnstake(item.votingId);
 
@@ -523,23 +559,23 @@ contract Ranking is StandardToken {
         uint votesDown;
         (votesUp, votesDown) = votingContract.getPollResult(voting.pollId);
 
-        uint direction = votesUp > votesDown ? 1 : 0;
+        uint _direction = votesUp > votesDown ? 1 : 0;
         uint distance = votesUp > votesDown ? votesUp - votesDown : votesDown - votesUp;
 
-        uint movingId = newMoving(now, voting.unstakeSpeed, distance, direction, item.votingId);
+        uint movingId = newMoving(now, voting.unstakeSpeed, distance, _direction, item.votingId);
         item.movingsIds.push(movingId);
         item.votingId = 0;
 
-        emit MovingStarted(itemId, item.votingId, movingId, now, distance, direction, voting.unstakeSpeed);
+        emit MovingStarted(_itemId, item.votingId, movingId, now, distance, _direction, voting.unstakeSpeed);
 
-        emit VotingFinished(itemId, item.votingId);
+        emit VotingFinished(_itemId, item.votingId);
     }
 
-    function unstake(uint itemId)
+    function unstake(uint _itemId)
         public
     {
-        for (uint i = 0; i < Items[itemId].movingsIds.length; ++i) {
-            Moving storage moving = Movings[Items[itemId].movingsIds[i]];
+        for (uint i = 0; i < Items[_itemId].movingsIds.length; ++i) {
+            Moving storage moving = Movings[Items[_itemId].movingsIds[i]];
 
             if (Votings[moving.votingId].voters[msg.sender].stake != 0) {
                 VoterInfo storage voterInfo = Votings[moving.votingId].voters[msg.sender];
@@ -566,16 +602,16 @@ contract Ranking is StandardToken {
 
 
     /* INTERNAL FUNCTIONS */
-    function newVoting(uint itemId)
+    function newVoting(uint _itemId)
         internal
         returns (uint)
     {
         uint votingId = VotingsLastId++;
         Voting storage voting = Votings[votingId];
-        Item storage item = Items[itemId];
+        Item storage item = Items[_itemId];
 
         voting.startTime = now;
-        voting.fixedFee = getFixedCommission(itemId);
+        voting.fixedFee = getFixedCommission(_itemId);
         voting.unstakeSpeed = getUnstakeSpeed();
         voting.commitTtl = currentCommitTtl;
         voting.revealTtl = currentRevealTtl;
@@ -585,7 +621,7 @@ contract Ranking is StandardToken {
 
 
         voting.pollId = votingContract.startPoll(
-            itemId,
+            _itemId,
             voting.commitTtl,
             voting.revealTtl
         );
@@ -593,32 +629,32 @@ contract Ranking is StandardToken {
         return votingId;
     }
 
-    function newMoving(uint startTime, uint speed, uint distance, uint direction, uint votingId)
+    function newMoving(uint _startTime, uint _speed, uint _distance, uint _direction, uint _votingId)
         internal
         returns (uint)
     {
         uint movingId = MovingsLastId++;
         Moving storage moving = Movings[movingId];
 
-        moving.startTime = startTime;
-        moving.speed = speed;
-        moving.distance = distance;
-        moving.direction = direction;
-        moving.votingId = votingId;
+        moving.startTime = _startTime;
+        moving.speed = _speed;
+        moving.distance = _distance;
+        moving.direction = _direction;
+        moving.votingId = _votingId;
 
         return movingId;
     }
 
-    function removeOldMovings(uint itemId)
+    function removeOldMovings(uint _itemId)
         internal
     {
-        Item storage item = Items[itemId];
+        Item storage item = Items[_itemId];
 
         for (uint i = 0; i < item.movingsIds.length; ++i) {
             Moving storage moving = Movings[item.movingsIds[i]];
 
             if (now.sub(moving.startTime).mul(moving.speed) >= moving.distance) {
-                unstakeForAllVoters(moving.votingId, itemId);
+                unstakeForAllVoters(moving.votingId);
 
                 if (moving.direction != 0)
                     item.lastRank = item.lastRank.add(moving.distance);
@@ -628,7 +664,7 @@ contract Ranking is StandardToken {
                 if (maxRank < item.lastRank)
                     maxRank = item.lastRank;
 
-                emit MovingRemoved(itemId, moving.votingId, item.movingsIds[i]);
+                emit MovingRemoved(_itemId, moving.votingId, item.movingsIds[i]);
 
                 delete Votings[moving.votingId];
                 delete Movings[item.movingsIds[i]];
@@ -640,11 +676,10 @@ contract Ranking is StandardToken {
         }
     }
 
-    function unstakeForAllVoters(uint votingId, uint itemId)
+    function unstakeForAllVoters(uint _votingId)
         internal
     {
-        Voting storage voting = Votings[votingId];
-        Item storage item = Items[itemId];
+        Voting storage voting = Votings[_votingId];
 
         for (uint i = 0; i < voting.votersAddresses.length; ++i) {
             VoterInfo storage voter = voting.voters[voting.votersAddresses[i]];
@@ -656,19 +691,10 @@ contract Ranking is StandardToken {
         }
     }
 
-    function calculatePrize(uint overallPrize, uint overallStake, uint voterStake)
+    function sendPrizesOrUnstake(uint _votingId)
         internal
-        returns (uint)
     {
-        return overallPrize.mul(voterStake).div(overallStake);
-    }
-
-    function sendPrizesOrUnstake(uint votingId)
-        internal
-        onlyExistVoting(votingId)
-        onlyFinishedVoting(votingId)
-    {
-        Voting storage voting = Votings[votingId];
+        Voting storage voting = Votings[_votingId];
 
         for (uint i = 0; i < voting.votersAddresses.length; ++i) {
             if (votingContract.isWinner(voting.pollId, voting.votersAddresses[i])) {
@@ -695,7 +721,7 @@ contract Ranking is StandardToken {
 
         balances[this] = balances[this].sub(_value);
         balances[_to] = balances[_to].add(_value);
-        Transfer(this, _to, _value);
+        emit Transfer(this, _to, _value);
         return true;
     }
 
@@ -707,7 +733,7 @@ contract Ranking is StandardToken {
 
         balances[_from] = balances[_from].sub(_value);
         balances[this] = balances[this].add(_value);
-        Transfer(_from, this, _value);
+        emit Transfer(_from, this, _value);
         return true;
     }
 }

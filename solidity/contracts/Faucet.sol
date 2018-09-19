@@ -1,9 +1,8 @@
 pragma solidity ^0.4.23;
 
 import 'zeppelin-solidity/contracts/token/ERC20/StandardToken.sol';
-import 'zeppelin-solidity/contracts/ownership/Superuser.sol';
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
-
+import 'zeppelin-solidity/contracts/ownership/Superuser.sol';
 
 contract Faucet is Superuser {
 
@@ -13,12 +12,6 @@ contract Faucet is Superuser {
         address receiver,
         uint amount
     );
-    event AdminAdded(
-        address admin
-    );
-    event AdminRemoved(
-        address admin
-    );
 
     StandardToken token;
     mapping (address => uint) lastFaucets;
@@ -26,12 +19,14 @@ contract Faucet is Superuser {
     uint public faucetSize;
     uint public faucetRate;
 
-    constructor(address tokenAddress, address[] admins) public {
-        token = StandardToken(tokenAddress);
 
-        for (uint i = 0; i < admins.length; i++) {
-            addRole(admins[i], ROLE_SUPERUSER);
-        }
+    constructor() public {}
+
+    function init(address tokenAddress)
+        public
+        onlyOwner
+    {
+        token = StandardToken(tokenAddress);
     }
 
 
@@ -65,26 +60,6 @@ contract Faucet is Superuser {
     {
         faucetSize = newSize;
     }
-
-
-    function addAdmin(address newAdmin)
-        public
-        onlyOwner
-    {
-        require(newAdmin != address(0));
-        addRole(newAdmin, ROLE_SUPERUSER);
-        emit AdminAdded(newAdmin);
-    }
-
-    function removeAdmin(address admin)
-        public
-        onlyOwner
-    {
-        require(admin != address(0));
-        removeRole(admin, ROLE_SUPERUSER);
-        emit AdminRemoved(admin);
-    }
-
 
     function faucet()
         public
