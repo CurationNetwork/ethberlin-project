@@ -108,11 +108,9 @@ contract Ranking is StandardToken {
 
     uint stakesCounter = 1;
     uint maxRank;
-    uint votingCount;
     uint avgStake;
 
     IVoting votingContract;
-
 
     /* constants */
     uint dynamicFeeLinearRate;
@@ -122,9 +120,7 @@ contract Ranking is StandardToken {
     uint maxFixedFeeRate;
     uint maxFixedFeePrecision;
 
-    uint tMin;
-    uint unstakeSpeed0;
-    uint unstakeSpeedCoef;
+    uint unstakeSpeed;
 
     uint currentCommitTtl;
     uint currentRevealTtl;
@@ -143,8 +139,7 @@ contract Ranking is StandardToken {
 
     function init(address votingContractAddress,
                 uint dynamicFeeLinearRate_, uint dynamicFeeLinearPrecision_, uint maxOverStakeFactor_,
-                uint maxFixedFeeRate_, uint maxFixedFeePrecision_,
-                uint tMin_, uint unstakeSpeed0_, uint unstakeSpeedCoef_,
+                uint maxFixedFeeRate_, uint maxFixedFeePrecision_, uint unstakeSpeed_,
                 uint currentCommitTtl_, uint currentRevealTtl_, uint initialAvgStake_
     )
         public
@@ -158,10 +153,7 @@ contract Ranking is StandardToken {
         maxFixedFeeRate = maxFixedFeeRate_;
         maxFixedFeePrecision = maxFixedFeePrecision_;
 
-        tMin = tMin_;
-
-        unstakeSpeed0 = unstakeSpeed0_;
-        unstakeSpeedCoef = unstakeSpeedCoef_;
+        unstakeSpeed = unstakeSpeed_;
 
         currentCommitTtl = currentCommitTtl_;
         currentRevealTtl = currentRevealTtl_;
@@ -303,7 +295,7 @@ contract Ranking is StandardToken {
                 if (moving.direction != 0)
                     rank = rank.add(moving.distance);
                 else
-                    rank = rank.add(moving.distance);
+                    rank = rank.sub(moving.distance);
             }
             else {
                 if (moving.direction != 0)
@@ -321,8 +313,7 @@ contract Ranking is StandardToken {
         view
         returns (uint)
     {
-        return 1;
-//        return unstakeSpeed0 + tMin * votingCount * unstakeSpeedCoef / avgStake;
+        return unstakeSpeed;  //TODO dynamic change
     }
 
     function getItems()
@@ -510,7 +501,7 @@ contract Ranking is StandardToken {
         votingContract.revealVote(voting.pollId, direction, stake, salt, msg.sender);
 
         stakesCounter++;
-        avgStake = avgStake + (stake - 1) / stakesCounter;
+        avgStake = avgStake.add(stake - 1).div(stakesCounter);
 
         emit VoteReveal(itemId, item.votingId, msg.sender, direction, stake);
     }
@@ -598,8 +589,6 @@ contract Ranking is StandardToken {
             voting.commitTtl,
             voting.revealTtl
         );
-
-        votingCount++;
 
         return votingId;
     }

@@ -20,7 +20,7 @@ contract('Ranking', function(accounts) {
 
     let voters = accounts.slice(2, 5);
 
-    let rankingParams = [ 1, 100, 10, 10, 100, 300, 1, 2, 180, 180, 200 ];
+    let rankingParams = [ 1, 100, 10, 10, 100, 1, 180, 180, 200 ];
 
     before(async function() {
         console.log("Deploy voting");
@@ -90,10 +90,10 @@ contract('Ranking', function(accounts) {
 
             console.log(voting);
 
-            for (let i = 0; i < voting[7].length; ++i) {
-                let voterInfo = await this.ranking.getVoterInfo.call(item[5], voting[7][i]);
+            for (let i = 0; i < voting[5].length; ++i) {
+                let voterInfo = await this.ranking.getVoterInfo.call(item[5], voting[5][i]);
 
-                console.log('Info for ', voting[7][i], ': ', voterInfo);
+                console.log('Info for ', voting[5][i], ': ', voterInfo);
             }
         });
 
@@ -119,10 +119,10 @@ contract('Ranking', function(accounts) {
 
             console.log('Voting:', voting);
 
-            for (let i = 0; i < voting[7].length; ++i) {
-                let voterInfo = await this.ranking.getVoterInfo.call(moving[4], voting[7][i]);
+            for (let i = 0; i < voting[5].length; ++i) {
+                let voterInfo = await this.ranking.getVoterInfo.call(moving[4], voting[5][i]);
 
-                console.log('Info for ', voting[7][i], ': ', voterInfo);
+                console.log('Info for ', voting[5][i], ': ', voterInfo);
             }
 
             console.log(voters[0], 'balance:', await this.ranking.balanceOf(voters[0]));

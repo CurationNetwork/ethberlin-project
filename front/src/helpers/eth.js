@@ -1,4 +1,5 @@
 import abi from '../constants/Ranking.js';
+import faucetAbi from '../constants/Faucet.js';
 
 import { address } from '../constants/constants.js';
 
@@ -35,7 +36,26 @@ export const sendTransaction = (contractAddress) => {
 }
 
 export const readContract = (contractAddress, funcName, params) => {
-  const сtorDapp = web3.eth.contract(abi.abi).at(contractAddress);
+  const сtorDapp = web3.eth.contract(abi).at(contractAddress);
+
+  return new Promise((resolve, reject) => {
+    try {
+      сtorDapp[funcName](...params, (error, result) => {
+        if (error) {
+          console.error(error);
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+export const readContractFaucet = (contractAddress, funcName, params) => {
+  const сtorDapp = web3.eth.contract(faucetAbi).at(contractAddress);
 
   return new Promise((resolve, reject) => {
     try {

@@ -1,7 +1,7 @@
-import { readContract } from '../../helpers/eth';
+import { readContract, readContractFaucet } from '../../helpers/eth';
 import { requestsConfig } from '../../../config/config';
 
-import { address } from '../../constants/constants.js';
+import { address, faucetAddress } from '../../constants/constants.js';
 
 export const getItemIds = () => {
   return !requestsConfig.USE_MOCK
@@ -230,5 +230,13 @@ export const getBalance = (target) => {
     ? readContract(address, 'balanceOf', [target])
     : new Promise((resolve, reject) => {
       resolve(100)
+    })
+}
+
+export const faucet = () => {
+  return !requestsConfig.USE_MOCK
+    ? readContractFaucet(faucetAddress, 'faucet', [])
+    : new Promise((resolve, reject) => {
+      resolve(true)
     })
 }

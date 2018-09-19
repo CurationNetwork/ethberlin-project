@@ -19,7 +19,7 @@ class App extends Component {
   constructor(props) {
     super(props);
 
-    this.approve = this.approve.bind(this);
+    this.faucet = this.faucet.bind(this);
   }
 
   componentDidMount() {
@@ -36,10 +36,9 @@ class App extends Component {
     }, 1000);
   }
 
-  approve() {
-    api.approve(address)
-      .then(() => api.approve(votingAddress))
-      .then(() => alert('approve OK'))
+  faucet() {
+    api.faucet()
+      .then(() => alert('faucet OK'))
       .catch(e => console.log(e));
   }
 
@@ -67,6 +66,9 @@ class App extends Component {
                 <span className="tokens">{balance}</span>
                 <span className="sym">CRN</span>
               </p>
+              <button className="faucet-bnt btn" onClick={() => this.faucet()}>
+                <span className="faucet-text">Faucet</span>
+              </button>
             </div>
             {/* <div className="overlay" /> */}
           </header>
